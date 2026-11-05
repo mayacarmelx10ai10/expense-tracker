@@ -1,0 +1,11 @@
+{
+  "name": "מעקב הוצאות עם מאיה",
+  "short_name": "הוצאות עם מאיה",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#FAF8F4",
+  "theme_color": "#FAF8F4",
+  "icons": [{"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]
+}
