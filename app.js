@@ -87,6 +87,10 @@ const TOK = {   // ההרשאה נשמרת רק לתקופת הלשונית (ses
   save(t, e) { try { sessionStorage.setItem('tok', JSON.stringify({ t, e })); } catch { /* מצב פרטי */ } },
   clear() { try { sessionStorage.removeItem('tok'); } catch { /* מצב פרטי */ } }
 };
+/* הכתובת של החשבון נשמרת במכשיר בלבד, כדי שגוגל לא תציג שוב בחירת חשבון בכל כניסה */
+async function rememberAccount(tok) {
+  try { const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: 'Bearer ' + tok } }); const j = await r.json(); if (j && j.email) LS.set('hint', j.email); } catch { /* לא קריטי */ }
+}
 const Auth = {
   tok: (TOK.load() || {}).t || null, exp: (TOK.load() || {}).e || 0, tc: null, _res: null, _rej: null,
   conf() { return window.APP_CONFIG || {}; },
@@ -95,15 +99,15 @@ const Auth = {
   init() {
     if (this.tc || !window.google || !google.accounts || !this.ready()) return;
     this.tc = google.accounts.oauth2.initTokenClient({
-      client_id: this.conf().clientId, scope: 'https://www.googleapis.com/auth/drive.file',
-      callback: r => { if (r.error) { this._rej && this._rej(authErr(r.error)); return; } this.tok = r.access_token; this.exp = Date.now() + (r.expires_in || 3600) * 1000; TOK.save(this.tok, this.exp); LS.set('hadAuth', true); this._res && this._res(this.tok); },
+      client_id: this.conf().clientId, scope: 'https://www.googleapis.com/auth/drive.file openid email',
+      callback: r => { if (r.error) { this._rej && this._rej(authErr(r.error)); return; } this.tok = r.access_token; this.exp = Date.now() + (r.expires_in || 3600) * 1000; TOK.save(this.tok, this.exp); LS.set('hadAuth', true); if (!LS.get('hint', '')) rememberAccount(this.tok); this._res && this._res(this.tok); },
       error_callback: e => this._rej && this._rej(authErr(e.type || 'popup'))
     });
   },
   request(prompt) {
     return new Promise((res, rej) => {
       this.init(); if (!this.tc) return rej(authErr('Google עדיין נטען או שחסרות הגדרות'));
-      this._res = res; this._rej = rej; this.tc.requestAccessToken({ prompt });
+      this._res = res; this._rej = rej; const hint = LS.get('hint', ''); this.tc.requestAccessToken(hint ? { prompt, hint } : { prompt });
     });
   },
   token() { return this.valid() ? Promise.resolve(this.tok) : this.request(''); },      // חידוש שקט
@@ -497,7 +501,8 @@ async function pinPress(v) {
   if (S.pinUntil > Date.now()) return;
   S.pinEntry += v; S.pinMsg = '';
   if (S.pinEntry.length < 4) { render(); return; }
-  const code = S.pinEntry; S.pinEntry = '';
+  const code = S.pinEntry; render();   // הספרה הרביעית מתמלאת לפני הבדיקה
+  S.pinEntry = '';
   if (S.screen === 'pinsetup') {
     const st = S.pinSetup || (S.pinSetup = { step: 1, first: '' });
     if (st.step === 1) { st.first = code; st.step = 2; render(); return; }
@@ -719,7 +724,7 @@ async function act(a, t) {
       if (!confirm(n ? `יש ${n} הוצאות שעוד לא נשלחו לגיליון, והן יימחקו מהמכשיר אם תנתקי עכשיו.\nלנתק בכל זאת?` : 'לנתק את הגיליון? ההוצאות והתקציב נשארים בגיליון, והעותק שלהם יימחק מהמכשיר הזה.')) break;
       S.cfg = { sheetId: '', sheetName: '' }; S.needAuth = false; S.budgetCfg = null; S.data = { fixed: [], variable: [] }; S.entries = []; S.pending = []; S.lastSync = null; S.error = null;
       PT.pulled = false;
-      ['cache', 'pending', 'lastSync', 'demoEntries', 'hadAuth', 'prefsDirty'].forEach(k => { try { localStorage.removeItem(k); } catch { /* מצב פרטי */ } });
+      ['cache', 'pending', 'lastSync', 'demoEntries', 'hadAuth', 'prefsDirty', 'hint'].forEach(k => { try { localStorage.removeItem(k); } catch { /* מצב פרטי */ } });
       if (Auth.tok && window.google && google.accounts) { try { google.accounts.oauth2.revoke(Auth.tok, () => {}); } catch { /* לא קריטי */ } }
       Auth.tok = null; Auth.exp = 0; TOK.clear(); LS.set('cfg', S.cfg); S.screen = 'home'; await load(); break;
     }
