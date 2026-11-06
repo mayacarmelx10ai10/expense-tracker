@@ -349,7 +349,7 @@ function home() {
   <div id="tabs" ${S.q.trim() ? 'hidden' : ''}>
   <div class="seg"><button data-act="tab" data-v="var" class="${isVar ? 'on' : ''}">שוטפות</button><button data-act="tab" data-v="fixed" class="${!isVar ? 'on' : ''}">קבועות</button></div>
   ${isVar ? `<div class="seg sm"><button data-act="period" data-v="week" class="${S.period === 'week' ? 'on' : ''}" ${cur ? '' : 'disabled'}>שבוע</button><button data-act="period" data-v="month" class="${S.period === 'month' || !cur ? 'on' : ''}">חודש</button></div>` : ''}
-  <div class="bu2"><span>תקציב ${isVar ? 'שוטפות' : 'קבועות'} <b class="num">${fmt(total)}</b>${S.preview ? ' · תצוגה מקדימה' : ''}</span><button class="lnkp" data-act="summary">סיכום חודש ${icon('arrow-left-s')}</button></div>
+  <div class="bu2"><span>תקציב ${isVar ? 'שוטפות' : 'קבועות'} <b class="num">${fmt(total)}</b>${S.preview ? ' · תצוגה מקדימה' : ''}</span>${showSummary() ? `<button class="lnkp" data-act="summary">סיכום חודש ${icon('arrow-left-s')}</button>` : ''}</div>
   </div>
   <div class="cats" id="cats">${catsHtml()}</div>
   ${nav()}`;
@@ -404,6 +404,13 @@ const eomRule = k => { const v = S.eomRules[k]; return v === 'box' ? 'aside' : v
 /* ---------- סיכום חודש: חריגות, היתרה שלא נוצלה, הפקדות בצד, והחלטות ---------- */
 const ruleFor = key => (S.decisions[S.ym] && S.decisions[S.ym][key]) || eomRule(key);
 const nowDay = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return d.getDate() + '/' + (d.getMonth() + 1); };
+/* סיכום החודש מופיע רק ביום האחרון של החודש הפיננסי (בהדגמה תמיד, לבדיקה) */
+function showSummary() {
+  if (DEV && !isLive()) return true;
+  if (S.month !== S.current.month) return false;
+  const t = new Date(), tm = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1);
+  return finMonth(tm, S.startDay || 1) !== finMonth(t, S.startDay || 1);
+}
 function summaryRows() {
   const rows = [];
   [['שוטפות', S.data.variable], ['קבועות', S.data.fixed]].forEach(([t, gs]) => gs.forEach(g => g.items.forEach(i => rows.push({ ...i, group: g.name, type: t, rule: ruleFor(i.key) }))));
@@ -416,11 +423,11 @@ function summaryScreen() {
   const notAside = under.filter(r => r.rule !== 'aside');
   const unspent = notAside.reduce((a, r) => a + left(r), 0);
   const asideRows = rows.filter(r => r.rule === 'aside' && left(r) > 0.005);
-  const askRows = rows.filter(r => (r.rule === '' || r.rule === 'ask') && left(r) > 0.005);
+  const askRows = rows.filter(r => r.rule === 'ask' && left(r) > 0.005);   // רק מי שבחרת עבורו "לשאול"
   const carryRows = rows.filter(r => r.rule === 'carry' && Math.abs(r.budget + (r.carry || 0) - r.spent) > 0.005);
   const done = S.curYm && S.ym < S.curYm;
   const amt = n => `<b class="num">${fmt(Math.abs(n))}</b>`;
-  const depRow = r => { const d = dep[r.key]; return `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}</small></span><div class="dpr">${d ? `<span class="sync ok">הופקד · ${esc(d.day)}</span><button class="lnk" data-act="undepo" data-k="${esc(r.key)}">ביטול</button>` : `${amt(left(r))}<button class="btn sm" data-act="depo" data-k="${esc(r.key)}" data-v="${Math.round(left(r) * 100) / 100}">הפקדתי</button>`}</div></div>`; };
+  const depRow = r => { const d = dep[r.key]; return `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}</small></span><div class="dpr">${amt(d ? d.amt : left(r))}${d ? `<button class="chk on" data-act="undepo" data-k="${esc(r.key)}" aria-label="ביטול סימון">${icon('check')} הופקד · ${esc(d.day)}</button>` : `<button class="chk" data-act="depo" data-k="${esc(r.key)}" data-v="${Math.round(left(r) * 100) / 100}">${icon('checkbox-blank-circle')} הפקדתי</button>`}</div></div>`; };
   const askRow = r => `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">נשאר ${fmt(left(r))}</small></span><div class="seg3"><button data-act="decide" data-k="${esc(r.key)}" data-v="carry">לגלגל</button><button data-act="decide" data-k="${esc(r.key)}" data-v="aside">לשים בצד</button></div></div>`;
   const carryRow = r => { const c = r.budget + (r.carry || 0) - r.spent; return `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}</small></span><b class="num ${c < 0 ? 'neg' : ''}">${c > 0 ? '+' : '−'}${fmt(Math.abs(c)).replace('−', '')}</b></div>`; };
   const sec = (title, list, row, note) => list.length ? `<div class="secl">${title}</div><section class="sc2 eg sr">${note ? `<p class="sp" style="margin-top:0">${note}</p>` : ''}${list.map(row).join('')}</section>` : '';
@@ -432,7 +439,8 @@ function summaryScreen() {
     <div class="st over"><small>חרגו מהתקציב</small><b>${over.length}</b><span>קטגוריות</span></div>
     <div class="st"><small>הוצאו פחות מהמתוכנן</small><b>${under.length}</b><span>קטגוריות</span></div>
   </div>
-  <div class="sleft"><small>נשאר כסף שהיה אמור להיות מוצא ולא הוצא</small><b class="num">${fmt(unspent)}</b><span>לא כולל מה שמופקד בצד</span></div></section>
+  <div class="sleft"><small>נשאר כסף שהיה אמור להיות מוצא ולא הוצא</small><b class="num">${fmt(dep._all ? dep._all.amt : unspent)}</b><span>ב-${notAside.length} קטגוריות · לא כולל מה שמופקד בצד</span>
+    <div class="sact">${dep._all ? `<button class="chk on" data-act="undepo" data-k="_all" aria-label="ביטול סימון">${icon('check')} הופקד · ${esc(dep._all.day)}</button>` : unspent > 0.005 ? `<button class="chk" data-act="depo" data-k="_all" data-v="${Math.round(unspent * 100) / 100}">${icon('checkbox-blank-circle')} הפקדתי את זה</button>` : ''}</div></div></div></section>
   ${sec('להפקיד בצד', asideRows, depRow, 'אחרי שהפקדת בפועל, סמני "הפקדתי".')}
   ${sec('צריך להחליט', askRows, askRow, 'מה לעשות עם מה שנשאר בסעיפים האלה.')}
   ${sec('מתגלגל לחודש הבא', carryRows, carryRow, '')}

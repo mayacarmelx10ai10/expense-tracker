@@ -324,8 +324,12 @@ input,select,textarea{color:var(--ink)}
 .st{background:var(--sand-2);border-radius:var(--r-ctl);padding:var(--s3);display:flex;flex-direction:column}
 .st small{font-size:12.5px;color:var(--ink-2)}.st b{font-size:32px;font-weight:700;line-height:1.1;margin-top:2px}.st span{font-size:12px;color:var(--mute)}
 .st.over b{color:var(--pt)}
-.sleft{margin-top:var(--s3);background:var(--ink);color:#fff;border-radius:var(--r-ctl);padding:var(--s4);display:flex;flex-direction:column}
-.sleft small{font-size:13px;color:#DAD6CC}.sleft b{font-size:30px;font-weight:700;margin-top:2px}.sleft span{font-size:12px;color:#DAD6CC}
+.sleft{margin-top:var(--s3);background:var(--sand-2);border-radius:var(--r-ctl);padding:var(--s4);display:flex;flex-direction:column;gap:2px}
+.sleft small{font-size:13px;color:var(--ink-2)}.sleft b{font-size:32px;font-weight:700;line-height:1.15}.sleft span{font-size:12.5px;color:var(--mute)}
+.sact{margin-top:var(--s3)}
+.chk{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 12px;font-size:13.5px;color:var(--ink-2);font-weight:500}
+.chk i{font-size:16px}
+.chk.on{background:var(--ok-bg);border-color:var(--ok-bg);color:var(--ok-fg);font-weight:600}
 .dpr{display:flex;align-items:center;gap:var(--s3)}
 .neg{color:var(--pt)}
 .er .seg3{flex:0 0 auto}
