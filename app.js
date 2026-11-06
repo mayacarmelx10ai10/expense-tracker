@@ -512,11 +512,12 @@ function settings() {
   </section>
 
   ${!live && DEV ? `<section class="sc2"><div class="sh2">${icon('flask')}<b>הדגמה (פיתוח)</b></div><div class="brow"><button class="btn sm o" data-act="sample">הוצאות לדוגמה</button><button class="btn sm danger" data-act="resetDemo">איפוס</button></div></section>` : ''}
-  <div class="foot">גרסה 1</div>
+  <div class="foot">גרסה ${APP_VERSION}</div>
   ${nav()}`;
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
+const APP_VERSION = '1.4 · 6.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
