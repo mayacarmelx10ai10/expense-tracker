@@ -1,6 +1,6 @@
 // רשת קודם, ואז מטמון: כך שבזמן הפיתוח תמיד רואים את הגרסה העדכנית, ובלי אינטרנט האפליקציה עדיין נפתחת.
-const CACHE='expenses-v2';
-const SHELL=['./','index.html','app.css','app.js','bridge.js','config.js','icon.svg'];
+const CACHE='expenses-v3';
+const SHELL=['./','index.html','app.css','app.js','bridge.js','config.js','icon.svg','apple-touch-icon.png','icon-192.png','icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{

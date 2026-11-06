@@ -157,7 +157,14 @@
     cache.modelAt = Date.now();
     return cache.model;
   }
-  const curYm = m => { const now = cfg.now(); return ymOf(finMonth(now, m.startDay), now.getFullYear()); };
+  /* סדר החודשים בגיליון (מתחיל באוקטובר בגיליון שלך) ושנה לכל חודש */
+  const monthOrder = mod => Object.keys(mod.variable.cols).map(Number).sort((x, y) => mod.variable.cols[x][0] - mod.variable.cols[y][0]);
+  function ymFor(mod, m) {
+    const now = cfg.now(), first = monthOrder(mod)[0] || 1, cur = finMonth(now, mod.startDay);
+    const firstYear = cur >= first ? now.getFullYear() : now.getFullYear() - 1;
+    return m >= first ? firstYear * 100 + m : (firstYear + 1) * 100 + m;
+  }
+  const curYm = m => ymFor(m, finMonth(cfg.now(), m.startDay));
 
   /* ---------- תקציב: עמודה מוגדרת, וקפיאה לפי חודש (שינוי חל רק קדימה) ---------- */
   async function colHistory() {
@@ -231,10 +238,43 @@
   }
 
   /* ---------- קריאה ---------- */
-  async function budget(month) {
+  async function actuals(mod, mo) {
+    const fcN = mod.fixed.cols[mo], vcN = mod.variable.cols[mo];
+    if (!fcN || !vcN) return null;
+    const fc = colLetter(fcN), vc1 = colLetter(vcN[0]), vc2 = colLetter(vcN[vcN.length - 1]);
+    const fr = mod.fixed.first, vr = mod.variable.first;
+    const [fa, va] = await batchVals([
+      q(SHEETS.FIXED) + '!' + fc + fr + ':' + fc + (fr + mod.fixed.list.length - 1),
+      q(SHEETS.VAR) + '!' + vc1 + vr + ':' + vc2 + (vr + mod.variable.list.length - 1)
+    ]);
+    return {
+      fixed: mod.fixed.list.map((_, i) => num(at(fa[i], 0))),
+      variable: mod.variable.list.map((_, i) => [0, 1, 2, 3, 4].reduce((s, w) => s + num(at(va[i], w)), 0))
+    };
+  }
+  /* גלגול: מה שנשאר (או חסר) בחודש שהסתיים עובר לחודש הבא, רק בסעיפים שנקבע להם "לגלגל" */
+  async function carries(mod, mo, opts) {
+    const order = monthOrder(mod), cur = finMonth(cfg.now(), mod.startDay);
+    const tIdx = order.indexOf(mo), cIdx = order.indexOf(cur);
+    const lim = Math.max(0, Math.min(tIdx, cIdx < 0 ? tIdx : cIdx));   // רק חודשים שהסתיימו
+    const rules = (opts && opts.rules) || {}, dec = (opts && opts.decisions) || {};
+    const any = Object.keys(rules).some(k => rules[k] === 'carry') || Object.keys(dec).some(y => Object.keys(dec[y] || {}).some(k => dec[y][k] === 'carry'));
+    let cf = mod.fixed.list.map(() => 0), cv = mod.variable.list.map(() => 0);
+    for (let i = 0; any && i < lim; i++) {
+      const m = order[i], ym = ymFor(mod, m), bud = await budgets(mod, ym), act = await actuals(mod, m);
+      if (!act) continue;
+      const step = (isVar, carry, bg, ac) => carry.map((c, j) => {
+        const key = (isVar ? 'var:' : 'fixed:') + j, rule = (dec[ym] && dec[ym][key]) || rules[key];
+        return rule === 'carry' && (bg[j] > 0 || c !== 0) ? (bg[j] + c) - ac[j] : 0;
+      });
+      cf = step(false, cf, bud.fixed, act.fixed); cv = step(true, cv, bud.variable, act.variable);
+    }
+    return { fixed: cf, variable: cv };
+  }
+  async function budget(month, opts) {
     const mod = await model(), now = cfg.now();
-    const curMonth = finMonth(now, mod.startDay), mo = month || curMonth, ym = ymOf(mo, now.getFullYear());
-    const b = await budgets(mod, ym);
+    const curMonth = finMonth(now, mod.startDay), mo = month || curMonth, ym = ymFor(mod, mo);
+    const b = await budgets(mod, ym), cr = await carries(mod, mo, opts);
     const fcN = mod.fixed.cols[mo], vcN = mod.variable.cols[mo];
     if (!fcN || !vcN) throw new Error('בגיליון אין עמודות לחודש ' + mo);
     const fc = colLetter(fcN), vc1 = colLetter(vcN[0]), vc2 = colLetter(vcN[vcN.length - 1]);
@@ -243,12 +283,12 @@
       q(SHEETS.FIXED) + '!' + fc + fr + ':' + fc + (fr + mod.fixed.list.length - 1),
       q(SHEETS.VAR) + '!' + vc1 + vr + ':' + vc2 + (vr + mod.variable.list.length - 1)
     ]);
-    function group(list, arr, actual, isVar) {
+    function group(list, arr, actual, isVar, carry) {
       const groups = []; let cur = null;
       list.forEach((it, i) => {
         if (!(arr[i] > 0)) return;
         if (!cur || cur.name !== it.group) { cur = { name: it.group, items: [] }; groups.push(cur); }
-        const item = { key: (isVar ? 'var:' : 'fixed:') + it.n, name: it.name, budget: arr[i] };
+        const item = { key: (isVar ? 'var:' : 'fixed:') + it.n, name: it.name, budget: arr[i], carry: Math.round((carry[i] || 0) * 100) / 100 };
         if (isVar) {
           item.weekly = Math.round(arr[i] / 4.3);
           item.weeks = [0, 1, 2, 3, 4].map(w => num(at(actual[i], w)));
@@ -258,8 +298,8 @@
       });
       return groups;
     }
-    return { ok: true, month: mo, startDay: mod.startDay, currentMonth: curMonth, currentWeek: weekIdx(now, mod.startDay, curMonth), budgetColumn: b.col, budgetFrozen: b.frozen,
-      fixed: group(mod.fixed.list, b.fixed, fa, false), variable: group(mod.variable.list, b.variable, va, true) };
+    return { ok: true, month: mo, ym: ym, currentYm: curYm(mod), startDay: mod.startDay, currentMonth: curMonth, currentWeek: weekIdx(now, mod.startDay, curMonth), budgetColumn: b.col, budgetFrozen: b.frozen,
+      fixed: group(mod.fixed.list, b.fixed, fa, false, cr.fixed), variable: group(mod.variable.list, b.variable, va, true, cr.variable) };
   }
 
   async function entries(month) {
@@ -354,7 +394,7 @@
     p = p || {};
     switch (action) {
       case 'ping': return ping();
-      case 'budget': return budget(p.month);
+      case 'budget': return budget(p.month, p);
       case 'entries': return entries(p.month);
       case 'settings': return settings();
       case 'prefs': return prefs();

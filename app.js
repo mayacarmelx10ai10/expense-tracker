@@ -51,7 +51,7 @@ const S = {
   screen: 'home', detailKey: null, sheet: null,
   order: LS.get('order', { g: {}, i: {} }), tags: LS.get('tags', {}),
   pending: LS.get('pending', []), lastSync: LS.get('lastSync', null),
-  eomRules: LS.get('eomRules', {}), locked: LS.get('locked', false), lockStage: 'welcome', pinEntry: '', pinMsg: '', pinFail: 0, pinUntil: 0, pinSetup: null, prefsTs: LS.get('prefsTs', 0), q: '', eq: '', error: null, loading: false, status: null, budgetCfg: null, preview: false, needAuth: false
+  eomRules: LS.get('eomRules', {}), decisions: LS.get('decisions', {}), deposits: LS.get('deposits', {}), ym: 0, curYm: 0, locked: LS.get('locked', false), lockStage: 'welcome', pinEntry: '', pinMsg: '', pinFail: 0, pinUntil: 0, pinSetup: null, prefsTs: LS.get('prefsTs', 0), q: '', eq: '', error: null, loading: false, status: null, budgetCfg: null, preview: false, needAuth: false
 };
 const isLive = () => !!S.cfg.sheetId;
 // מצב הדגמה קיים רק לפיתוח ולעיצוב (כתובת עם ?demo). משתמשת רגילה חייבת להתחבר לגיליון.
@@ -73,7 +73,7 @@ const Demo = {
         return o;
       })
     }));
-    return { ok: true, month: mo, startDay: sd, currentMonth: cm, currentWeek: weekIdx(now, sd, cm), fixed: mk(this.snap.fixed, false), variable: mk(this.snap.variable, true) };
+    return { ok: true, month: mo, ym: 202600 + mo, currentYm: 202600 + cm, startDay: sd, currentMonth: cm, currentWeek: weekIdx(now, sd, cm), fixed: mk(this.snap.fixed, false), variable: mk(this.snap.variable, true) };
   }
 };
 
@@ -114,8 +114,9 @@ const Auth = {
 };
 
 /* העדפות: נשמרות במכשיר ובגיליון (תא אחד בלשונית "הגדרות אפליקציה"); הגרסה החדשה יותר קובעת */
+const reloadSoon = () => { clearTimeout(reloadSoon.t); reloadSoon.t = setTimeout(() => { if (isLive() && !S.locked) load(S.month, true); }, 900); };
 const PT = { timer: null, pulled: false, busy: false };
-const prefsNow = () => ({ ts: S.prefsTs, order: S.order, tags: S.tags, eomRules: S.eomRules });
+const prefsNow = () => ({ ts: S.prefsTs, order: S.order, tags: S.tags, eomRules: S.eomRules, decisions: S.decisions, deposits: S.deposits });
 function touchPrefs() {
   S.prefsTs = Date.now(); LS.set('prefsTs', S.prefsTs); LS.set('prefsDirty', true);
   clearTimeout(PT.timer); PT.timer = setTimeout(pushPrefs, 1500); PT.status = 'saving'; paintPrefs();
@@ -143,9 +144,9 @@ async function pullPrefs() {
     const r = await call('prefs'); PT.pulled = true;
     const p = r.prefs;
     if (p && p.ts > S.prefsTs) {
-      S.order = p.order || { g: {}, i: {} }; S.tags = p.tags || {}; S.eomRules = p.eomRules || {}; S.prefsTs = p.ts;
-      LS.set('order', S.order); LS.set('tags', S.tags); LS.set('eomRules', S.eomRules); LS.set('prefsTs', S.prefsTs); LS.set('prefsDirty', false);
-      render();
+      S.order = p.order || { g: {}, i: {} }; S.tags = p.tags || {}; S.eomRules = p.eomRules || {}; S.decisions = p.decisions || {}; S.deposits = p.deposits || {}; S.prefsTs = p.ts;
+      LS.set('order', S.order); LS.set('tags', S.tags); LS.set('eomRules', S.eomRules); LS.set('decisions', S.decisions); LS.set('deposits', S.deposits); LS.set('prefsTs', S.prefsTs); LS.set('prefsDirty', false);
+      render(); reloadSoon();
     } else if (!p || p.ts < S.prefsTs || LS.get('prefsDirty', false)) { if (!p) touchPrefs(); else LS.set('prefsDirty', true); pushPrefs(); }
   } catch (e) { /* בפעם הבאה */ }
 }
@@ -182,7 +183,7 @@ async function connectFlow() {
   try {
     await Promise.all([call('ping'), wait(800)]);
     S.conn.step = 2; renderConn();
-    const [b] = await Promise.all([call('budget', {}), wait(900)]);
+    const [b] = await Promise.all([call('budget', { rules: S.eomRules, decisions: S.decisions }), wait(900)]);
     const nv = b.variable.reduce((a, g) => a + g.items.length, 0), nf = b.fixed.reduce((a, g) => a + g.items.length, 0);
     S.conn.info = `${nv} שוטפות ו-${nf} קבועות`; S.conn.step = 3; renderConn();
     const [en] = await Promise.all([call('entries', { month: b.month }), wait(800)]);
@@ -216,7 +217,7 @@ async function pickSheet() {
 }
 
 function applyBudget(b) {
-  S.month = b.month; S.startDay = b.startDay; S.current = { month: b.currentMonth, week: b.currentWeek };
+  S.ym = b.ym || 0; S.curYm = b.currentYm || 0; S.month = b.month; S.startDay = b.startDay; S.current = { month: b.currentMonth, week: b.currentWeek };
   S.data = { fixed: b.fixed, variable: b.variable };
   S.preview = b.budgetFrozen === false;   // חודש עתידי: תצוגה מקדימה של התקציב
 }
@@ -227,7 +228,7 @@ async function load(month, silent) {
   S.loading = true; S.error = null; if (!silent) render();
   try {
     if (isLive()) {
-      const b = await call('budget', { month });
+      const b = await call('budget', { month, rules: S.eomRules, decisions: S.decisions });
       const en = await call('entries', { month: b.month });
       applyBudget(b); S.entries = en.entries; S.lastSync = Date.now(); LS.set('lastSync', S.lastSync); LS.set('cache', { b, en: en.entries });
       pullPrefs(); pushPrefs();
@@ -263,10 +264,11 @@ function sortedGroups(groups, tab) {
 function view(item, isVar) {
   const wk = isVar && S.period === 'week' && S.month === S.current.month;
   const weekly = item.weekly || Math.round(item.budget / 4.3);
-  const budget = wk ? weekly : item.budget, spent = wk ? (item.weeks[S.current.week] || 0) : item.spent;
-  const p = budget > 0 ? spent / budget : 0;
+  const carry = wk ? 0 : (item.carry || 0), planned = wk ? weekly : item.budget;
+  const budget = Math.max(0, planned + carry), spent = wk ? (item.weeks[S.current.week] || 0) : item.spent;
+  const p = budget > 0 ? spent / budget : (spent > 0 ? 2 : 0);
   const st = p > 1.0000001 ? 'over' : (isVar && p >= 0.8 && p < 1) ? 'warn' : 'ok';
-  return { budget, spent, p, st };
+  return { budget, spent, p, st, carry, planned };
 }
 const tagsFor = key => { const set = new Set(S.tags[key] || []); S.entries.filter(e => e.key === key).forEach(e => (e.tags || []).forEach(t => set.add(t))); return [...set]; };
 
@@ -347,7 +349,7 @@ function home() {
   <div id="tabs" ${S.q.trim() ? 'hidden' : ''}>
   <div class="seg"><button data-act="tab" data-v="var" class="${isVar ? 'on' : ''}">שוטפות</button><button data-act="tab" data-v="fixed" class="${!isVar ? 'on' : ''}">קבועות</button></div>
   ${isVar ? `<div class="seg sm"><button data-act="period" data-v="week" class="${S.period === 'week' ? 'on' : ''}" ${cur ? '' : 'disabled'}>שבוע</button><button data-act="period" data-v="month" class="${S.period === 'month' || !cur ? 'on' : ''}">חודש</button></div>` : ''}
-  <div class="bu2">תקציב ${isVar ? 'שוטפות' : 'קבועות'} <b class="num">${fmt(total)}</b>${S.preview ? ' · תצוגה מקדימה' : ''}</div>
+  <div class="bu2"><span>תקציב ${isVar ? 'שוטפות' : 'קבועות'} <b class="num">${fmt(total)}</b>${S.preview ? ' · תצוגה מקדימה' : ''}</span><button class="lnkp" data-act="summary">סיכום חודש ${icon('arrow-left-s')}</button></div>
   </div>
   <div class="cats" id="cats">${catsHtml()}</div>
   ${nav()}`;
@@ -359,6 +361,7 @@ function card(item, isVar) {
   return `<div class="sc ${v.st === 'over' ? 'ov' : ''}" data-act="open" data-k="${esc(item.key)}">
     <div class="tp"><div class="nm">${esc(item.name)}</div><button class="pls" data-act="add" data-k="${esc(item.key)}" aria-label="הוספת הוצאה ל${esc(item.name)}">+</button></div>
     <div class="am"><b class="num">${fmt(v.spent)}</b><span>מתוך <span class="num">${fmt(v.budget)}</span></span></div>
+    ${v.carry ? `<div class="cr ${v.carry < 0 ? 'neg' : ''}"><span class="num">${v.carry > 0 ? '+' : '−'}${fmt(Math.abs(v.carry)).replace('−', '')}</span> מגולגל</div>` : ''}
     ${v.p > 0 ? `<div class="ln"><i style="width:${Math.min(100, v.p * 100)}%"></i></div>` : ""}${alert}</div>`;
 }
 
@@ -369,7 +372,7 @@ function nav() {
 function detail() {
   const f = findItem(S.detailKey);
   if (!f) { S.screen = 'home'; return home(); }
-  const { group, item, isVar } = f, gi = gInfo(group), v = view(item, isVar);
+  const { group, item, isVar } = f, gi = gInfo(group), v = view(item, isVar), eff = Math.max(0, item.budget + (item.carry || 0));
   const ents = S.entries.filter(e => e.key === item.key).sort((a, b) => b.dt.localeCompare(a.dt));
   const byTag = {}; ents.forEach(e => (e.tags || []).forEach(t => { byTag[t] = (byTag[t] || 0) + e.amount; }));
   const tagRows = Object.entries(byTag).sort((a, b) => b[1] - a[1]);
@@ -379,9 +382,9 @@ function detail() {
   <div class="dh"><button class="gb" data-act="back" aria-label="חזרה">${icon('arrow-right-s')}</button></div>
   <div class="dt" style="--c:${gi.c}"><span class="ci">${icon(gi.i)}</span><div><b>${esc(item.name)}</b><span>${esc(group)} · ${MONTHS[S.month - 1]}</span></div></div>
   <div class="card dcard" style="--c:${gi.c}">
-    <div class="dtop"><span class="ico">${icon('hand-coin')}</span><div><small>הוצאתי החודש</small><b class="big num">${fmt(item.spent)}</b></div><span class="pct ${v.st === 'over' ? 'over' : ''}">${Math.round(item.budget ? item.spent / item.budget * 100 : 0)}%</span></div>
-    <div class="ln thick"><i style="width:${Math.min(100, item.budget ? item.spent / item.budget * 100 : 0)}%;background:${v.st === 'over' ? 'var(--pink)' : 'var(--ink)'}"></i></div>
-    <div class="dstats"><div><small>התקציב</small><b class="num">${fmt(item.budget)}</b></div>${item.spent <= item.budget ? `<div><small>נשאר</small><b class="num">${fmt(item.budget - item.spent)}</b></div>` : `<div class="ov"><small>חריגה</small><b class="num">${fmt(item.spent - item.budget)}</b></div>`}</div>
+    <div class="dtop"><span class="ico">${icon('hand-coin')}</span><div><small>הוצאתי החודש</small><b class="big num">${fmt(item.spent)}</b></div><span class="pct ${v.st === 'over' ? 'over' : ''}">${Math.round(eff ? item.spent / eff * 100 : 0)}%</span></div>
+    <div class="ln thick"><i style="width:${Math.min(100, eff ? item.spent / eff * 100 : 0)}%;background:${v.st === 'over' ? 'var(--pink)' : 'var(--ink)'}"></i></div>
+    <div class="dstats ${item.carry ? 'c3' : ''}"><div><small>התקציב</small><b class="num">${fmt(item.budget)}</b></div>${item.carry ? `<div><small>מגולגל</small><b class="num">${item.carry > 0 ? '+' : '−'}${fmt(Math.abs(item.carry)).replace('−', '')}</b></div>` : ''}${item.spent <= eff ? `<div><small>נשאר</small><b class="num">${fmt(eff - item.spent)}</b></div>` : `<div class="ov"><small>חריגה</small><b class="num">${fmt(item.spent - eff)}</b></div>`}</div>
     ${v.st === 'warn' ? '<div class="al amb" style="margin-top:12px">מתקרבת לתקרה</div>' : ''}</div>
   ${tagRows.length ? `<div class="secl">לפי תגית</div><div class="tgl">${tagRows.map(([t, a]) => `<div class="tr"><div><span>${esc(t)}</span><b class="num">${fmt(a)}</b></div><div class="ln"><i style="width:${a / mx * 100}%"></i></div></div>`).join('')}</div>` : ''}
   <div class="secl">ההוצאות החודש</div>
@@ -398,6 +401,44 @@ const EOM_HELP = [
   ['לשאול', 'בסוף החודש האפליקציה שואלת מה לעשות.']
 ];
 const eomRule = k => { const v = S.eomRules[k]; return v === 'box' ? 'aside' : v === 'part' ? 'ask' : EOM[v] ? v : ''; };   // ערכים מגרסאות קודמות
+/* ---------- סיכום חודש: חריגות, היתרה שלא נוצלה, הפקדות בצד, והחלטות ---------- */
+const ruleFor = key => (S.decisions[S.ym] && S.decisions[S.ym][key]) || eomRule(key);
+const nowDay = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return d.getDate() + '/' + (d.getMonth() + 1); };
+function summaryRows() {
+  const rows = [];
+  [['שוטפות', S.data.variable], ['קבועות', S.data.fixed]].forEach(([t, gs]) => gs.forEach(g => g.items.forEach(i => rows.push({ ...i, group: g.name, type: t, rule: ruleFor(i.key) }))));
+  return rows;
+}
+function summaryScreen() {
+  const rows = summaryRows(), dep = S.deposits[S.ym] || {};
+  const left = r => r.budget - r.spent;                       // מול התקציב החודשי
+  const over = rows.filter(r => r.spent > r.budget + 0.005), under = rows.filter(r => r.spent < r.budget - 0.005);
+  const notAside = under.filter(r => r.rule !== 'aside');
+  const unspent = notAside.reduce((a, r) => a + left(r), 0);
+  const asideRows = rows.filter(r => r.rule === 'aside' && left(r) > 0.005);
+  const askRows = rows.filter(r => (r.rule === '' || r.rule === 'ask') && left(r) > 0.005);
+  const carryRows = rows.filter(r => r.rule === 'carry' && Math.abs(r.budget + (r.carry || 0) - r.spent) > 0.005);
+  const done = S.curYm && S.ym < S.curYm;
+  const amt = n => `<b class="num">${fmt(Math.abs(n))}</b>`;
+  const depRow = r => { const d = dep[r.key]; return `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}</small></span><div class="dpr">${d ? `<span class="sync ok">הופקד · ${esc(d.day)}</span><button class="lnk" data-act="undepo" data-k="${esc(r.key)}">ביטול</button>` : `${amt(left(r))}<button class="btn sm" data-act="depo" data-k="${esc(r.key)}" data-v="${Math.round(left(r) * 100) / 100}">הפקדתי</button>`}</div></div>`; };
+  const askRow = r => `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">נשאר ${fmt(left(r))}</small></span><div class="seg3"><button data-act="decide" data-k="${esc(r.key)}" data-v="carry">לגלגל</button><button data-act="decide" data-k="${esc(r.key)}" data-v="aside">לשים בצד</button></div></div>`;
+  const carryRow = r => { const c = r.budget + (r.carry || 0) - r.spent; return `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}</small></span><b class="num ${c < 0 ? 'neg' : ''}">${c > 0 ? '+' : '−'}${fmt(Math.abs(c)).replace('−', '')}</b></div>`; };
+  const sec = (title, list, row, note) => list.length ? `<div class="secl">${title}</div><section class="sc2 eg sr">${note ? `<p class="sp" style="margin-top:0">${note}</p>` : ''}${list.map(row).join('')}</section>` : '';
+  return `
+  <div class="dh"><button class="gb" data-act="home" aria-label="חזרה">${icon('arrow-right-s')}</button></div>
+  <div class="dt"><div><b>סיכום ${MONTHS[S.month - 1] || ''}</b><span>${done ? 'החודש הסתיים' : 'החודש עוד לא הסתיים, הנתונים עד עכשיו'}</span></div></div>
+  <div class="ps" id="ps">${prefsStatusHtml()}</div>
+  <section class="sc2"><div class="sstats">
+    <div class="st over"><small>חרגו מהתקציב</small><b>${over.length}</b><span>קטגוריות</span></div>
+    <div class="st"><small>הוצאו פחות מהמתוכנן</small><b>${under.length}</b><span>קטגוריות</span></div>
+  </div>
+  <div class="sleft"><small>נשאר כסף שהיה אמור להיות מוצא ולא הוצא</small><b class="num">${fmt(unspent)}</b><span>לא כולל מה שמופקד בצד</span></div></section>
+  ${sec('להפקיד בצד', asideRows, depRow, 'אחרי שהפקדת בפועל, סמני "הפקדתי".')}
+  ${sec('צריך להחליט', askRows, askRow, 'מה לעשות עם מה שנשאר בסעיפים האלה.')}
+  ${sec('מתגלגל לחודש הבא', carryRows, carryRow, '')}
+  ${over.length ? `<div class="secl">חרגו מהתקציב</div><section class="sc2 eg sr">${over.map(r => `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}</small></span><b class="num neg">${fmt(r.spent - r.budget)}</b></div>`).join('')}</section>` : ''}
+  ${nav()}`;
+}
 function eomItems() { return [['שוטפות', S.data.variable], ['קבועות', S.data.fixed]]; }
 function eomSummary() {
   const c = { carry: 0, aside: 0, ask: 0, '': 0 };
@@ -563,7 +604,7 @@ function onboarding(locked) {
       <li>${icon('check')}<span>השינויים מתעדכנים בכל המכשירים</span></li>
     </ul>
     <div class="cta">
-    ${locked ? `<div class="assure">${icon('lock')}האפליקציה נעולה והנתונים מוסתרים</div><button class="btn big" data-act="unlockStart">כניסה</button>` : ready ? `<div class="assure">${icon('lock')}האפליקציה רואה רק את הגיליון שתבחרי</div><button class="btn big" data-act="pick">התחברות עם גוגל</button>` : '<div class="banner err" style="margin:0;text-align:right"><i class="ri-error-warning-fill"></i><span>האפליקציה עדיין לא הוגדרה מול Google, ולכן אי אפשר להתחבר. למנהלת: ממלאים את <b>config.js</b> (README, "הגדרת Google").</span></div>'}
+    ${locked ? `<div class="assure">${icon('lock')}האפליקציה נעולה והנתונים מוסתרים</div><button class="btn big" data-act="unlockStart">כניסה</button>` : ready ? `<div class="assure">${icon('lock')}האפליקציה רואה רק את הגיליון שתבחרי</div><button class="btn big" data-act="pick">התחברות עם גוגל</button>${Auth.conf().templateId ? `<a class="lnk tpl" href="https://docs.google.com/spreadsheets/d/${esc(Auth.conf().templateId)}/copy" target="_blank" rel="noopener">אין לי גיליון עדיין: יצירת עותק מהתבנית</a>` : ''}` : '<div class="banner err" style="margin:0;text-align:right"><i class="ri-error-warning-fill"></i><span>האפליקציה עדיין לא הוגדרה מול Google, ולכן אי אפשר להתחבר. למנהלת: ממלאים את <b>config.js</b> (README, "הגדרת Google").</span></div>'}
     ${S.error ? `<div class="hint" style="margin-top:var(--s3);color:var(--pt);text-align:center">${esc(S.error)}</div>` : ''}
     </div>
   </div>`;
@@ -574,7 +615,7 @@ function render() {
   if (S.locked && isLive()) { a.innerHTML = lockScreen(); return; }
   if (!isLive() && !DEV) { a.innerHTML = onboarding(); return; }
   if (S.screen === 'pinsetup') { a.innerHTML = pinSetupScreen(); return; }
-  a.innerHTML = S.screen === 'detail' ? detail() : S.screen === 'settings' ? settings() : S.screen === 'eom' ? eomScreen() : home();
+  a.innerHTML = S.screen === 'detail' ? detail() : S.screen === 'settings' ? settings() : S.screen === 'eom' ? eomScreen() : S.screen === 'summary' ? summaryScreen() : home();
   if (S.screen === 'home') initSort();
 }
 
@@ -701,6 +742,10 @@ async function act(a, t) {
       S.screen = 'settings'; window.scrollTo(0, 0); render();
       if (isLive() && Auth.valid()) { try { S.budgetCfg = await call('settings'); render(); } catch (err) { if (err.code === 'auth') { S.needAuth = true; render(); } else toast('לא הצלחתי לטעון הגדרות: ' + err.message); } }
       break;
+    case 'summary': S.screen = 'summary'; window.scrollTo(0, 0); render(); break;
+    case 'depo': { (S.deposits[S.ym] = S.deposits[S.ym] || {})[k] = { amt: Number(v), day: nowDay(), at: Date.now() }; LS.set('deposits', S.deposits); touchPrefs(); render(); break; }
+    case 'undepo': if (S.deposits[S.ym]) { delete S.deposits[S.ym][k]; LS.set('deposits', S.deposits); touchPrefs(); render(); } break;
+    case 'decide': (S.decisions[S.ym] = S.decisions[S.ym] || {})[k] = v; LS.set('decisions', S.decisions); touchPrefs(); reloadSoon(); render(); break;
     case 'lock': lockApp(); break;
     case 'unlockStart': if (PIN.get()) { S.lockStage = 'pin'; S.pinEntry = ''; S.pinMsg = ''; S.error = null; render(); } else finishUnlock(); break;
     case 'lockBack': S.lockStage = 'welcome'; S.pinEntry = ''; S.pinMsg = ''; render(); break;
@@ -710,7 +755,7 @@ async function act(a, t) {
     case 'pinSetup': S.pinSetup = { step: 1, first: '' }; S.pinEntry = ''; S.pinMsg = ''; S.screen = 'pinsetup'; window.scrollTo(0, 0); render(); break;
     case 'pinRemove': if (confirm('להסיר את קוד הנעילה?')) { PIN.clear(); render(); toast('הקוד הוסר'); } break;
     case 'eomScreen': S.screen = 'eom'; window.scrollTo(0, 0); render(); break;
-    case 'eomSet': S.eomRules[k] = v; LS.set('eomRules', S.eomRules); touchPrefs(); render(); break;
+    case 'eomSet': S.eomRules[k] = v; LS.set('eomRules', S.eomRules); touchPrefs(); reloadSoon(); render(); break;
     case 'eomAll': eomItems().forEach(([, gs]) => gs.forEach(g => g.items.forEach(i => { S.eomRules[i.key] = v; }))); LS.set('eomRules', S.eomRules); touchPrefs(); render(); break;
     case 'pickCat': { const sh = S.sheet; sh.key = k; sh.tags = []; renderSheet(); break; }
     case 'saveCol': {
