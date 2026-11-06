@@ -335,3 +335,14 @@ input,select,textarea{color:var(--ink)}
 .er .seg3{flex:0 0 auto}
 .sr .er{flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:var(--s3)}
 .lnk.tpl{display:block;text-align:center;margin-top:var(--s4);font-size:14px;color:var(--ink-2)}
+
+/* כרטיס סעיף: האייקון קרוב לכותרת ולסכום */
+.dtop{gap:10px}
+.dtop>div{text-align:right}
+.dtop .big{text-align:right}
+.cx{font-size:13px;color:var(--ink-2);margin-top:var(--s3);line-height:1.5}
+.tp2{display:inline-flex;align-items:baseline;gap:var(--s2)}
+.tp2 em{font-style:normal;font-size:12.5px;font-weight:600;color:var(--ink-2);background:var(--sand);border-radius:999px;padding:1px 8px}
+.emptyx{text-align:center;padding:var(--s4) var(--s4) var(--s5);color:var(--mute);font-size:15px}
+.emptyx p{margin-top:var(--s2)}
+.list:has(.emptyx){background:transparent;border:0}

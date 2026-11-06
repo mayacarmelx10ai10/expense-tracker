@@ -258,14 +258,20 @@
     const tIdx = order.indexOf(mo), cIdx = order.indexOf(cur);
     const lim = Math.max(0, Math.min(tIdx, cIdx < 0 ? tIdx : cIdx));   // רק חודשים שהסתיימו
     const rules = (opts && opts.rules) || {}, dec = (opts && opts.decisions) || {};
-    const any = Object.keys(rules).some(k => rules[k] === 'carry') || Object.keys(dec).some(y => Object.keys(dec[y] || {}).some(k => dec[y][k] === 'carry'));
+    const any = Object.keys(rules).some(k => rules[k] === 'carry' || rules[k] === 'aside' || rules[k] === 'ask') || Object.keys(dec).some(y => Object.keys(dec[y] || {}).length > 0);
     let cf = mod.fixed.list.map(() => 0), cv = mod.variable.list.map(() => 0);
     for (let i = 0; any && i < lim; i++) {
       const m = order[i], ym = ymFor(mod, m), bud = await budgets(mod, ym), act = await actuals(mod, m);
       if (!act) continue;
       const step = (isVar, carry, bg, ac) => carry.map((c, j) => {
-        const key = (isVar ? 'var:' : 'fixed:') + j, rule = (dec[ym] && dec[ym][key]) || rules[key];
-        return rule === 'carry' && (bg[j] > 0 || c !== 0) ? (bg[j] + c) - ac[j] : 0;
+        const key = (isVar ? 'var:' : 'fixed:') + j, decided = dec[ym] && dec[ym][key], rule = decided || rules[key];
+        if (!(bg[j] > 0 || c !== 0)) return 0;
+        const R = (bg[j] + c) - ac[j];
+        // לגלגל: הכול עובר הלאה. לשים בצד: יתרה חיובית מופקדת, אבל אי אפשר להפקיד מינוס, אז חוסר מתגלגל עד שיש פלוס.
+        // לשאול ללא החלטה: חוסר מתגלגל, יתרה חיובית מחכה להחלטה. לא נבחר: אין גלגול.
+        if (rule === 'carry') return R;
+        if (rule === 'aside' || (rule === 'ask' && !decided)) return R < 0 ? R : 0;
+        return 0;
       });
       cf = step(false, cf, bud.fixed, act.fixed); cv = step(true, cv, bud.variable, act.variable);
     }
