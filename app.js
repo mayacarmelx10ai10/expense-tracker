@@ -19,7 +19,6 @@ const DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pad2 = n => String(n).padStart(2, '0');
-const fmtS = n => (n < 0 ? '−' : '') + Math.abs(Math.round(n)).toLocaleString('en-US') + '₪';
 const fmt = n => (n < 0 ? '−' : '') + '₪' + Math.abs(Math.round(n)).toLocaleString('en-US');
 const LS = {
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
@@ -119,15 +118,25 @@ const PT = { timer: null, pulled: false, busy: false };
 const prefsNow = () => ({ ts: S.prefsTs, order: S.order, tags: S.tags, eomRules: S.eomRules });
 function touchPrefs() {
   S.prefsTs = Date.now(); LS.set('prefsTs', S.prefsTs); LS.set('prefsDirty', true);
-  clearTimeout(PT.timer); PT.timer = setTimeout(pushPrefs, 1500);
+  clearTimeout(PT.timer); PT.timer = setTimeout(pushPrefs, 1500); PT.status = 'saving'; paintPrefs();
 }
 async function pushPrefs() {
   if (!isLive() || PT.busy || !LS.get('prefsDirty', false)) return;
-  PT.busy = true;
-  try { await call('setPrefs', { prefs: prefsNow() }); LS.set('prefsDirty', false); }
-  catch (e) { if (e.code === 'auth') S.needAuth = true; /* יישלח בפעם הבאה */ }
-  finally { PT.busy = false; }
+  PT.busy = true; PT.status = 'saving'; paintPrefs();
+  try { await call('setPrefs', { prefs: prefsNow() }); LS.set('prefsDirty', false); PT.status = 'saved'; PT.at = Date.now(); LS.set('prefsSavedAt', PT.at); }
+  catch (e) { PT.status = 'error'; if (e.code === 'auth') S.needAuth = true; /* יישלח בפעם הבאה */ }
+  finally { PT.busy = false; paintPrefs(); }
 }
+/* חיווי שמירה של ההעדפות: שומר / נשמר (ומתי) / לא נשמר */
+function prefsStatusHtml() {
+  const pill = (c, t) => `<span class="sync ${c}">${t}</span>`;
+  if (!isLive()) return pill('warn', 'נשמר במכשיר הזה בלבד');
+  if (PT.status === 'saving') return pill('busy', 'שומר בגיליון…');
+  if (PT.status === 'error' || LS.get('prefsDirty', false)) return pill('warn', 'עוד לא נשמר בגיליון, ינסה שוב אוטומטית');
+  const at = PT.at || LS.get('prefsSavedAt', 0);
+  return pill('ok', 'נשמר בגיליון אוטומטית' + (at ? ' · ' + agoText(at) : ''));
+}
+function paintPrefs() { const e = $('#ps'); if (e) e.innerHTML = prefsStatusHtml(); }
 async function pullPrefs() {
   if (!isLive() || PT.pulled) return;
   try {
@@ -369,9 +378,11 @@ function detail() {
   return `
   <div class="dh"><button class="gb" data-act="back" aria-label="חזרה">${icon('arrow-right-s')}</button></div>
   <div class="dt" style="--c:${gi.c}"><span class="ci">${icon(gi.i)}</span><div><b>${esc(item.name)}</b><span>${esc(group)} · ${MONTHS[S.month - 1]}</span></div></div>
-  <div class="card" style="--c:${gi.c}"><div class="sp2"><div class="spent"><span class="ico">${icon('hand-coin')}</span><div><small>הוצאתי החודש</small><b>${fmtS(item.spent)}</b></div></div>
-      <div class="rest"><span>מתוך <b>${fmtS(item.budget)}</b></span>${item.spent <= item.budget ? `<span>נשאר <b>${fmtS(item.budget - item.spent)}</b></span>` : ''}</div></div>
-    <div class="ln"><i style="width:${Math.min(100, item.budget ? item.spent / item.budget * 100 : 0)}%;background:${v.st === 'over' ? 'var(--pink)' : 'var(--ink)'}"></i></div>${alert}</div>
+  <div class="card dcard" style="--c:${gi.c}">
+    <div class="dtop"><span class="ico">${icon('hand-coin')}</span><div><small>הוצאתי החודש</small><b class="big num">${fmt(item.spent)}</b></div><span class="pct ${v.st === 'over' ? 'over' : ''}">${Math.round(item.budget ? item.spent / item.budget * 100 : 0)}%</span></div>
+    <div class="ln thick"><i style="width:${Math.min(100, item.budget ? item.spent / item.budget * 100 : 0)}%;background:${v.st === 'over' ? 'var(--pink)' : 'var(--ink)'}"></i></div>
+    <div class="dstats"><div><small>התקציב</small><b class="num">${fmt(item.budget)}</b></div>${item.spent <= item.budget ? `<div><small>נשאר</small><b class="num">${fmt(item.budget - item.spent)}</b></div>` : `<div class="ov"><small>חריגה</small><b class="num">${fmt(item.spent - item.budget)}</b></div>`}</div>
+    ${v.st === 'warn' ? '<div class="al amb" style="margin-top:12px">מתקרבת לתקרה</div>' : ''}</div>
   ${tagRows.length ? `<div class="secl">לפי תגית</div><div class="tgl">${tagRows.map(([t, a]) => `<div class="tr"><div><span>${esc(t)}</span><b class="num">${fmt(a)}</b></div><div class="ln"><i style="width:${a / mx * 100}%"></i></div></div>`).join('')}</div>` : ''}
   <div class="secl">ההוצאות החודש</div>
   <div class="list">${ents.length ? ents.map(e => { const w = whenText(e.dt); return `<div class="e"><div>${esc(w.day)}<div class="tm"><span class="num">${w.time}</span></div>${(e.tags || []).length ? `<div class="etg">${e.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}${e.note ? `<div class="en">${esc(e.note)}</div>` : ''}</div>
@@ -411,6 +422,7 @@ function eomScreen() {
   return `
   <div class="dh"><button class="gb" data-act="settings" aria-label="חזרה">${icon('arrow-right-s')}</button></div>
   <div class="dt"><div><b>סוף חודש</b><span>מה עושים עם היתרה בכל סעיף</span></div></div>
+  <div class="ps" id="ps">${prefsStatusHtml()}</div>
   <section class="sc2 help">${EOM_HELP.map(([t, d]) => `<div class="hl"><b>${t}</b><span>${d}</span></div>`).join('')}</section>
   <section class="sc2 eg"><div class="er"><span class="en2"><b>כל הסעיפים</b><small class="ea">בחירה כאן משנה את כולם</small></span>${segAll}</div></section>
   <div class="field srch">${icon('search')}<input id="eq" type="search" placeholder="חיפוש סעיף" autocomplete="off" value="${esc(S.eq)}"></div>
@@ -751,7 +763,7 @@ window.addEventListener('online', () => { if (isLive()) flush(); });
 function refreshIfIdle() { if (isLive() && !S.locked && !S.sheet && !flushing && !S.pending.length && !S.needAuth && !S.loading && document.visibilityState === 'visible') load(S.month, true); }
 document.addEventListener('visibilitychange', refreshIfIdle);
 setInterval(refreshIfIdle, 45000);
-setInterval(() => { const e = $('#sp'); if (e) e.innerHTML = syncPill(); }, 20000);   // הזמן שליד "מעודכן" מתקדם גם בלי רענון
+setInterval(() => { const e = $('#sp'); if (e) e.innerHTML = syncPill(); paintPrefs(); }, 20000);   // הזמן שליד "מעודכן" מתקדם גם בלי רענון
 
 function sampleData() {
   const d = new Date(), day = n => { const x = new Date(d.getFullYear(), d.getMonth(), Math.max(1, d.getDate() - n), 9 + n, 15 + n); return `${x.getFullYear()}-${pad2(x.getMonth() + 1)}-${pad2(x.getDate())}T${pad2(x.getHours())}:${pad2(x.getMinutes())}`; };

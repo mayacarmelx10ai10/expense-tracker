@@ -286,3 +286,19 @@ i[class^="ri-"]{font-style:normal;line-height:1}
 .pinpad button:active{background:#F4F0E7}
 .pinpad{direction:ltr}
 .lnk{margin-top:var(--s5);color:var(--mute);font-size:14px;text-decoration:underline}
+
+/* כרטיס הסעיף */
+.dcard{padding:var(--s4)}
+.dtop{display:flex;align-items:center;gap:var(--s3)}
+.dtop .ico{width:48px;height:48px;border-radius:16px;font-size:25px}
+.dtop small{display:block;font-size:13px;color:var(--mute)}
+.dtop .big{display:block;font-size:34px;font-weight:700;line-height:1.1;letter-spacing:-.5px}
+.pct{margin-right:auto;align-self:flex-start;font-size:13px;font-weight:700;background:#F0ECE3;border-radius:999px;padding:3px 10px}
+.pct.over{background:var(--pink);color:#fff}
+.ln.thick{height:10px;border-radius:6px;margin-top:var(--s4);background:#EFE9DC}.ln.thick i{border-radius:6px}
+.dstats{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2);margin-top:var(--s4)}
+.dstats>div{background:color-mix(in srgb,var(--c) 40%,#fff);border-radius:14px;padding:var(--s3)}
+.dstats small{display:block;font-size:12.5px;color:rgba(20,22,27,.62)}
+.dstats b{display:block;font-size:18px;font-weight:700;margin-top:2px}
+.dstats .ov b{color:var(--pt)}
+.ps{padding:var(--s2) var(--s4) 0}.ps .sync{margin-right:0}
