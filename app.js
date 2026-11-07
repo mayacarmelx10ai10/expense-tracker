@@ -476,10 +476,13 @@ function eomCounts() {
   return c;
 }
 const cnt = n => n === 1 ? 'סעיף אחד' : n + ' סעיפים';
-function eomSummary() {   // רק מה שהוגדר, עם וי; "לא נבחר" לא מוצג
-  const c = eomCounts(), lines = [['carry', 'לגלגל לחודש הבא'], ['aside', 'לשים בצד'], ['ask', 'לשאול']].filter(([k]) => c[k] > 0);
-  if (!lines.length) return '<p class="sp" style="margin-top:0">עוד לא הוגדרו סעיפים.</p>';
-  return `<div class="eoml">${lines.map(([k, t]) => `<div class="eol"><i class="ri-checkbox-circle-fill"></i><b class="tg">${t}</b><b class="cn">${cnt(c[k])}</b></div>`).join('')}</div>`;
+function eomSummary() {   // מה שהוגדר עם וי, ואם יש סעיפים שעוד לא נבחרו: עיגול אדום עם המספר שלהם
+  const c = eomCounts(), total = eomItems().reduce((n, [, gs]) => n + gs.reduce((m, g) => m + g.items.length, 0), 0), unsel = total - c.carry - c.aside - c.ask;
+  const lines = [['carry', 'לגלגל לחודש הבא'], ['aside', 'לשים בצד'], ['ask', 'לשאול']].filter(([k]) => c[k] > 0);
+  if (!lines.length && !unsel) return '<p class="sp" style="margin-top:0">עוד לא הוגדרו סעיפים.</p>';
+  const rows = lines.map(([k, t]) => `<div class="eol"><i class="ri-checkbox-circle-fill"></i><b class="tg">${t}</b><b class="cn">${cnt(c[k])}</b></div>`);
+  if (unsel > 0) rows.push(`<div class="eol"><i class="rcount">${unsel}</i><b class="tg">${unsel === 1 ? 'סעיף אחד עוד לא נבחר' : 'סעיפים עוד לא נבחרו'}</b></div>`);
+  return `<div class="eoml">${rows.join('')}</div>`;
 }
 function eomRows() {
   const q = S.eq.trim();
@@ -487,7 +490,7 @@ function eomRows() {
   const left = i => `<small class="ea">תקציב <span class="num">${fmt(i.budget)}</span></small>`;   // רק התקציב, בלי המצב הנוכחי
   const out = eomItems().map(([t, gs]) => {
     const list = gs.map(g => ({ ...g, items: g.items.filter(i => matchQ(g, i, q)) })).filter(g => g.items.length);
-    return list.length ? `<div class="secl">${t}</div>` + list.map(g => `<div class="sc2 eg"><div class="egh">${esc(g.name)}</div>${g.items.map(i => `<div class="er"><span class="en2"><span class="nm2">${esc(i.name)}${eomRule(i.key) ? '' : '<i class="unsel" title="עוד לא נבחר" aria-label="עוד לא נבחר">!</i>'}</span>${left(i)}</span>${seg(i.key)}</div>`).join('')}</div>`).join('') : '';
+    return list.length ? `<div class="secl">${t}</div>` + list.map(g => `<div class="sc2 eg"><div class="egh">${esc(g.name)}</div>${g.items.map(i => `<div class="er"><span class="en2">${esc(i.name)}${left(i)}</span>${seg(i.key)}</div>`).join('')}</div>`).join('') : '';
   }).join('');
   return out || (q ? '<div class="empty">לא נמצא סעיף</div>' : '<div class="empty">הסעיפים ייטענו אחרי החיבור לגיליון.</div>');
 }
@@ -544,7 +547,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = '2.0 · 7.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = '2.1 · 7.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
