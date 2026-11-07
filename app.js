@@ -25,6 +25,7 @@ const LS = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* מצב פרטי */ } }
 };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const searchField = (id, ph, val, act, type) => `<div class="field srch"><i class="ri-search-line"></i><input id="${id}" type="${type || 'search'}" placeholder="${ph}" autocomplete="off" value="${esc(val)}"><button class="clr" data-act="${act}" aria-label="ניקוי החיפוש" ${val ? '' : 'hidden'}><i class="ri-close-circle-fill"></i></button></div>`;
 const icon = n => `<i class="ri-${n}-fill"></i>`;
 const nowLocal = () => { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
 const parseDT = s => { const m = /^(\d+)-(\d+)-(\d+)T(\d+):(\d+)/.exec(s); return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]); };
@@ -355,7 +356,7 @@ function home() {
     <button class="st" data-act="next" ${S.month >= 12 ? 'disabled' : ''} aria-label="חודש הבא">${icon('arrow-left-s')}</button>
     ${showSummary() ? `<button class="sumbtn" data-act="summary">${icon('file-list-3')}סיכום ${S.curYm && S.ym < S.curYm ? (MONTHS[S.month - 1] || 'חודש') : 'החודש'}</button>` : ''}</div>
   ${banners()}
-  <div class="field srch">${icon('search')}<input id="hq" type="search" placeholder="חיפוש בשוטפות ובקבועות" autocomplete="off" value="${esc(S.q)}"></div>
+  ${searchField('hq', 'חיפוש בשוטפות ובקבועות', S.q, 'clearQ')}
   <div id="tabs" ${S.q.trim() ? 'hidden' : ''}>
   <div class="seg"><button data-act="tab" data-v="var" class="${isVar ? 'on' : ''}">שוטפות</button><button data-act="tab" data-v="fixed" class="${!isVar ? 'on' : ''}">קבועות</button></div>
   ${isVar ? `<div class="seg sm"><button data-act="period" data-v="week" class="${S.period === 'week' ? 'on' : ''}" ${cur ? '' : 'disabled'}>שבוע</button><button data-act="period" data-v="month" class="${S.period === 'month' || !cur ? 'on' : ''}">חודש</button></div>` : ''}
@@ -378,7 +379,7 @@ function nav() {
   return `<nav class="nav"><button class="${S.screen === 'home' ? 'on' : ''}" data-act="home">${icon('home-5')}בית</button><button class="fab" data-act="fab" aria-label="הוספת הוצאה">+</button><button class="${S.screen === 'settings' || S.screen === 'eom' ? 'on' : ''}" data-act="settings">${icon('settings-3')}הגדרות</button></nav>`;
 }
 
-const EMPTY_ART = '';   // מצב ריק: משפט בלבד, בלי איור
+const EMPTY_ART = '<svg class="noexp" viewBox="0 0 120 84" width="108" height="76" aria-hidden="true"><rect x="8" y="10" width="104" height="66" rx="12" fill="none" stroke="currentColor" stroke-width="4"/><path d="M8 30 H112" stroke="currentColor" stroke-width="4"/><path d="M22 56 H46" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M18 74 L102 8" stroke="#FAF8F4" stroke-width="10" stroke-linecap="round"/><path d="M18 74 L102 8" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>';   // כרטיס אשראי עם קו: אין הוצאות
 function detail() {
   const f = findItem(S.detailKey);
   if (!f) { S.screen = 'home'; return home(); }
@@ -392,7 +393,7 @@ function detail() {
   <div class="dh"><button class="gb" data-act="back" aria-label="חזרה">${icon('arrow-right-s')}</button></div>
   <div class="dt" style="--c:${gi.c}"><span class="ci">${icon(gi.i)}</span><div><b>${esc(item.name)}</b><span>${esc(group)} · ${MONTHS[S.month - 1]}</span></div></div>
   <div class="card dcard" style="--c:${gi.c}">
-    <div class="dtop"><span class="ico">${icon('arrow-up-circle')}</span><div><small>הוצאתי החודש</small><b class="big num">${fmt(item.spent)}</b></div><span class="pct ${v.st === 'over' ? 'over' : ''}">${Math.round(eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%</span></div>
+    <div class="dtop"><span class="ico">${icon('bank-card')}</span><div><small>הוצאתי החודש</small><b class="big num">${fmt(item.spent)}</b></div><span class="pct ${v.st === 'over' ? 'over' : ''}">${Math.round(eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%</span></div>
     <div class="ln thick"><i style="width:${Math.min(100, eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%;background:${v.st === 'over' ? 'var(--pink)' : 'var(--ink)'}"></i></div>
     ${item.carry ? `<p class="cx">${item.carry > 0 ? `נשארו ${fmt(item.carry)} מהחודש הקודם, והם התווספו לתקציב החודש.` : `היה חוסר של ${fmt(-item.carry)} בחודש הקודם, והוא הופחת מהתקציב החודש.`}</p>` : ''}
     ${left < 0 && ruleFor(item.key) === 'aside' ? '<p class="cx neg">הסעיף במינוס, ולכן אי אפשר להפקיד. ההפקדה תחכה עד שיהיה פלוס.</p>' : ''}
@@ -433,39 +434,38 @@ function summaryRows() {
 function summaryScreen() {
   const rows = summaryRows(), dep = S.deposits[S.ym] || {};
   const left = r => r.budget + (r.carry || 0) - r.spent;     // היתרה (או החוסר) מול התקציב של החודש, כולל מה שגולגל אליו
-  const E = 0.005, over = rows.filter(r => left(r) < -E), under = rows.filter(r => left(r) > E);
+  const E = 0.005, desc = (list, f) => list.slice().sort((x, y) => Math.abs(f(y)) - Math.abs(f(x)));   // מהסכום הגדול לקטן
+  const over = desc(rows.filter(r => left(r) < -E), left), under = desc(rows.filter(r => left(r) > E), left);
   const tag = r => ({ carry: 'מתגלגל', aside: 'לשים בצד', ask: 'לשאול' }[r.rule] || 'לא נבחר');
   const notAside = under.filter(r => r.rule !== 'aside');
   const unspent = notAside.reduce((a, r) => a + left(r), 0);
-  const asideRows = rows.filter(r => r.rule === 'aside' && left(r) > E);
-  const negAside = rows.filter(r => r.rule === 'aside' && left(r) < -E);
-  const askRows = rows.filter(r => r.rule === 'ask' && left(r) > E);   // רק מי שבחרת עבורו "לשאול"
+  const asideRows = desc(rows.filter(r => r.rule === 'aside' && left(r) > E), left);
+  const negAside = desc(rows.filter(r => r.rule === 'aside' && left(r) < -E), left);
+  const askRows = desc(rows.filter(r => r.rule === 'ask' && left(r) > E), left);   // רק מי שבחרת עבורו "לשאול"
   const carryPos = rows.filter(r => r.rule === 'carry' && left(r) > E).reduce((a, r) => a + left(r), 0);
   const bigCarry = carryPos >= LARGE_CARRY;
   const done = S.curYm && S.ym < S.curYm;
   const amt = n => `<b class="num">${fmt(Math.abs(n))}</b>`;
   const rd = n => Math.round(n * 100) / 100;
-  const toggle = (key, val) => { const d = dep[key]; return d ? `<button class="chk on" data-act="undepo" data-k="${esc(key)}" aria-label="ביטול סימון">${icon('check')}הופקד · ${esc(d.day)}</button>` : `<button class="chk" data-act="depo" data-k="${esc(key)}" data-v="${rd(val)}">${icon('safe-2')}הפקדתי</button>`; };
+  const toggle = (key, val) => { const d = dep[key]; return d ? `<button class="chk on" data-act="undepo" data-k="${esc(key)}" aria-label="ביטול סימון">${icon('check')}הופקד · ${esc(d.day)}</button>` : `<button class="chk" data-act="depo" data-k="${esc(key)}" data-v="${rd(val)}">${icon('cash')}הפקדתי</button>`; };
   const depRow = r => `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}</small></span><div class="dpr">${amt(dep[r.key] ? dep[r.key].amt : left(r))}${toggle(r.key, left(r))}</div></div>`;
-  const carryNote = `<div class="er"><span class="en2">היתרה שמתגלגלת לחודש הבא<small class="ea">סכום גדול. מומלץ להפקיד אותו בצד עד החודש הבא.</small></span><div class="dpr">${amt(dep._carry ? dep._carry.amt : carryPos)}${toggle('_carry', carryPos)}</div></div>`;
+  const carryRow = `<div class="er hot"><span class="en2"><b>היתרה שמתגלגלת לחודש הבא</b><small class="ea">סכום גדול. מומלץ להפקיד אותו בצד עד החודש הבא.</small></span><div class="dpr">${amt(dep._carry ? dep._carry.amt : carryPos)}${toggle('_carry', carryPos)}</div></div>`;
+  const negRow = r => `<div class="er negrow"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}</small></span><b class="num neg">${fmt(left(r))}</b></div>`;
   const askRow = r => `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">נשאר ${fmt(left(r))}</small></span><div class="seg3"><button data-act="decide" data-k="${esc(r.key)}" data-v="carry">לגלגל</button><button data-act="decide" data-k="${esc(r.key)}" data-v="aside">לשים בצד</button></div></div>`;
-  const negRow = r => `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}</small></span><b class="num neg">−${fmt(-left(r)).replace('−', '')}</b></div>`;
-  const line = (r, val, note) => `<div class="al2"><span>${esc(r.name)}<small>${esc(r.group)}</small></span><span class="v">${note ? `<em>${note}</em>` : ''}<b class="num ${val < 0 ? 'neg' : ''}">${fmt(Math.abs(val))}</b></span></div>`;
-  const acc = (title, n, html, cls) => `<details class="acc ${cls || ''}"><summary><span>${title}</span><b>${n}</b>${icon('arrow-down-s')}</summary><div class="accl">${html || '<p class="sp">אין</p>'}</div></details>`;
+  const line = (r, val, note) => `<div class="al2"><span>${esc(r.name)}<small>${esc(r.group)}</small></span><span class="v">${note ? `<em>${note}</em>` : ''}<b class="num ${val < 0 ? 'neg' : ''}">${fmt(val)}</b></span></div>`;
+  const acc = (title, n, html, cls, sub) => `<details class="acc ${cls || ''}"><summary><span>${title}${sub ? `<small>${sub}</small>` : ''}</span><b class="num">${n}</b>${icon('arrow-down-s')}</summary><div class="accl">${html || '<p class="sp">אין</p>'}</div></details>`;
   const sec = (title, list, row, note) => list.length ? `<div class="secl">${title}</div><section class="sc2 eg sr">${note ? `<p class="sp" style="margin-top:0">${note}</p>` : ''}${list.map(row).join('')}</section>` : '';
-  const showDeposit = asideRows.length || bigCarry;
+  const showDeposit = asideRows.length || bigCarry || negAside.length;
   return `
   <div class="dh"><button class="gb" data-act="home" aria-label="חזרה">${icon('arrow-right-s')}</button></div>
   <div class="dt"><div><b>סיכום ${MONTHS[S.month - 1] || ''}</b><span>${done ? 'החודש הסתיים' : 'החודש עוד לא הסתיים, הנתונים עד עכשיו'}</span></div></div>
   <div class="ps" id="ps">${prefsStatusHtml()}</div>
   <section class="sc2 accs">
-    ${acc('חרגו מהתקציב', over.length, over.map(r => line(r, -left(r), r.rule === 'carry' || r.rule === 'aside' || r.rule === 'ask' ? 'יגולגל כחוסר' : '')).join(''), 'over')}
+    ${acc('חרגו מהתקציב', over.length, over.map(r => line(r, left(r), r.rule === 'carry' || r.rule === 'aside' || r.rule === 'ask' ? 'יגולגל כחוסר' : '')).join(''), 'over')}
     ${acc('הוצאו פחות מהמתוכנן', under.length, under.map(r => line(r, left(r), tag(r))).join(''))}
+    ${acc('נשאר כסף שלא הוצא', fmt(unspent), notAside.map(r => line(r, left(r), tag(r))).join(''), '', 'לא כולל מה שמופקד בצד')}
   </section>
-  <section class="sc2"><div class="sleft"><small>נשאר כסף שהיה אמור להיות מוצא ולא הוצא</small><b class="num">${fmt(unspent)}</b><span>ב-${notAside.length} קטגוריות · לא כולל מה שמופקד בצד</span></div>
-    ${acc('ממה זה מורכב', notAside.length, notAside.map(r => line(r, left(r), tag(r))).join(''))}</section>
-  ${showDeposit ? `<div class="secl">להפקיד בצד</div><section class="sc2 eg sr"><p class="sp" style="margin-top:0">כסף שנשאר בסעיפים שבחרת לשים בצד. סמני אחרי שהפקדת בפועל.</p>${asideRows.map(depRow).join('')}${bigCarry ? carryNote : ''}</section>` : ''}
-  ${sec('במינוס: אי אפשר להפקיד', negAside, negRow, 'הסעיפים האלה במינוס. אי אפשר להפקיד מינוס, אז החוסר מתגלגל לחודש הבא וההפקדה תחכה עד שיהיה פלוס.')}
+  ${showDeposit ? `<div class="secl">להפקיד בצד</div><section class="sc2 eg sr">${bigCarry ? carryRow : ''}${asideRows.length ? `<p class="sp">כסף שנשאר בסעיפים שבחרת לשים בצד. סמני אחרי שהפקדת בפועל.</p>${asideRows.map(depRow).join('')}` : ''}${negAside.length ? `<p class="sp">הסעיפים האלה במינוס. אי אפשר להפקיד מינוס, אז החוסר מתגלגל לחודש הבא וההפקדה תחכה עד שיהיה פלוס.</p>${negAside.map(negRow).join('')}` : ''}</section>` : ''}
   ${sec('צריך להחליט', askRows, askRow, 'מה לעשות עם מה שנשאר בסעיפים האלה.')}
   ${nav()}`;
 }
@@ -496,7 +496,7 @@ function eomScreen() {
   <div class="ps" id="ps">${prefsStatusHtml()}</div>
   <section class="sc2 help">${EOM_HELP.map(([t, d]) => `<div class="hl"><b>${t}</b><span>${d}</span></div>`).join('')}</section>
   <section class="sc2 eg"><div class="er"><span class="en2"><b>כל הסעיפים</b><small class="ea">בחירה כאן משנה את כולם</small></span>${segAll}</div></section>
-  <div class="field srch">${icon('search')}<input id="eq" type="search" placeholder="חיפוש סעיף" autocomplete="off" value="${esc(S.eq)}"></div>
+  ${searchField('eq', 'חיפוש סעיף', S.eq, 'clearEq')}
   <div id="eomrows">${eomRows()}</div>
   <div class="foot">הבחירה נשמרת בגיליון, ומתעדכנת בכל המכשירים.</div>
   ${nav()}`;
@@ -687,7 +687,7 @@ function renderSheet() {
   L.innerHTML = `<div class="scrim" data-act="closeSheet"></div><div class="sheet" role="dialog" aria-label="הוספת הוצאה"><div class="grab"></div>
     <div class="shd" style="--c:${gi.c}"><span class="ci">${icon(gi.i)}</span><div><b>${f ? esc(f.item.name) : 'הוספת הוצאה'}</b><span class="s">${f ? `הוצאתי <span class="num">${fmt(f.item.spent)}</span> מתוך <span class="num">${fmt(f.item.budget)}</span>` : 'בחרי קטגוריה והקלידי סכום'}</span></div></div>
     <div class="amt num" id="amt">${esc(sh.amount || '0')}<u></u></div>
-    ${sh.key ? '' : `<div class="field">${icon('search')}<input id="catq" type="text" placeholder="חיפוש קטגוריה" autocomplete="off"></div><div class="cl" id="catl">${catList('')}</div>`}
+    ${sh.key ? '' : `${searchField('catq', 'חיפוש קטגוריה', '', 'clearCat', 'text')}<div class="cl" id="catl">${catList('')}</div>`}
     <div class="field">${icon('calendar')}<input id="dt" type="datetime-local" value="${esc(sh.dt)}"></div>
     <div class="field">${icon('chat-3')}<input id="note" type="text" maxlength="200" placeholder="הערה (לא חובה)" value="${esc(sh.note || '')}"></div>
     ${sh.key ? `<div class="lab">תגיות</div><div class="tgs">${tags.map(t => `<button data-act="tagToggle" data-v="${esc(t)}" class="${sh.tags.includes(t) ? 'on' : ''}">${esc(t)}</button>`).join('')}<button class="add" data-act="tagNew">+ תגית חדשה</button></div>` : ''}
@@ -779,6 +779,9 @@ async function act(a, t) {
     case 'depo': { (S.deposits[S.ym] = S.deposits[S.ym] || {})[k] = { amt: Number(v), day: nowDay(), at: Date.now() }; LS.set('deposits', S.deposits); touchPrefs(); render(); break; }
     case 'undepo': if (S.deposits[S.ym]) { delete S.deposits[S.ym][k]; LS.set('deposits', S.deposits); touchPrefs(); render(); } break;
     case 'decide': (S.decisions[S.ym] = S.decisions[S.ym] || {})[k] = v; LS.set('decisions', S.decisions); touchPrefs(); reloadSoon(); render(); break;
+    case 'clearQ': { S.q = ''; const i = $('#hq'); if (i) { i.value = ''; i.focus(); } renderCats(); t.hidden = true; break; }
+    case 'clearEq': { S.eq = ''; const i = $('#eq'); if (i) { i.value = ''; i.focus(); } const r = $('#eomrows'); if (r) r.innerHTML = eomRows(); t.hidden = true; break; }
+    case 'clearCat': { const i = $('#catq'), l = $('#catl'); if (i) { i.value = ''; i.focus(); } if (l) l.innerHTML = catList(''); t.hidden = true; break; }
     case 'lock': lockApp(); break;
     case 'unlockStart': if (PIN.get()) { S.lockStage = 'pin'; S.pinEntry = ''; S.pinMsg = ''; S.error = null; render(); } else finishUnlock(); break;
     case 'lockBack': S.lockStage = 'welcome'; S.pinEntry = ''; S.pinMsg = ''; render(); break;
@@ -823,7 +826,7 @@ async function act(a, t) {
   }
 }
 document.addEventListener('click', ev => { const t = ev.target.closest('[data-act]'); if (!t) return; ev.preventDefault(); act(t.dataset.act, t); });
-document.addEventListener('input', ev => { if (ev.target.id === 'hq') { S.q = ev.target.value; renderCats(); return; } if (ev.target.id === 'eq') { S.eq = ev.target.value; const r = $('#eomrows'); if (r) r.innerHTML = eomRows(); return; } if (ev.target.id === 'catq') { const l = $('#catl'); if (l) l.innerHTML = catList(ev.target.value); return; } if (!S.sheet) return; if (ev.target.id === 'dt') S.sheet.dt = ev.target.value; else if (ev.target.id === 'note') S.sheet.note = ev.target.value; });
+document.addEventListener('input', ev => { const clr = ev.target.parentElement && ev.target.parentElement.querySelector('.clr'); if (clr) clr.hidden = !ev.target.value; if (ev.target.id === 'hq') { S.q = ev.target.value; renderCats(); return; } if (ev.target.id === 'eq') { S.eq = ev.target.value; const r = $('#eomrows'); if (r) r.innerHTML = eomRows(); return; } if (ev.target.id === 'catq') { const l = $('#catl'); if (l) l.innerHTML = catList(ev.target.value); return; } if (!S.sheet) return; if (ev.target.id === 'dt') S.sheet.dt = ev.target.value; else if (ev.target.id === 'note') S.sheet.note = ev.target.value; });
 document.addEventListener('keydown', ev => { if (ev.target.id === 'catq' && ev.key === 'Enter') { ev.preventDefault(); const b = $('#catl button'); if (b) b.click(); } });
 document.addEventListener('change', ev => { if (ev.target.id === 'selKey' && S.sheet) { S.sheet.key = ev.target.value || null; S.sheet.tags = []; renderSheet(); } });
 /* חידוש התחברות בלחיצה הראשונה: כשההרשאה פגה, כל נגיעה באפליקציה מחדשת אותה (פעולה של משתמשת, כדי שהדפדפן לא יחסום) */
