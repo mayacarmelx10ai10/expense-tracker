@@ -357,3 +357,33 @@ input,select,textarea{color:var(--ink)}
 .dstats>div{background:var(--sand-2)}
 .emptyi{display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:20px;background:var(--sand);color:var(--mute);font-size:30px}
 .emptyx{padding:var(--s5) var(--s4)}
+
+/* כפתור סיכום ליד שם החודש */
+.mt{flex-wrap:wrap}
+.sumbtn{margin-right:auto;display:inline-flex;align-items:center;gap:5px;background:var(--ink);color:#fff;border-radius:999px;padding:7px 13px;font-size:13px;font-weight:600}
+.sumbtn i{font-size:16px}
+/* הפקדתי: אייקון משמעותי וקרוב לטקסט */
+.chk{gap:4px;padding:7px 12px 7px 14px}
+.chk i{font-size:17px}
+/* אקורדיון בסיכום */
+.accs{padding:var(--s2) var(--s4)}
+.acc{border-bottom:1px solid var(--hair)}
+.accs .acc:last-child{border-bottom:0}
+.acc summary{list-style:none;display:flex;align-items:center;gap:var(--s2);padding:var(--s3) 0;font-size:15px;cursor:pointer}
+.acc summary::-webkit-details-marker{display:none}
+.acc summary span{flex:1}
+.acc summary b{font-size:22px;font-weight:700}
+.acc.over summary b{color:var(--pt)}
+.acc summary i{font-size:20px;color:var(--mute);transition:transform .15s}
+.acc[open] summary i{transform:rotate(180deg)}
+.accl{padding:0 0 var(--s3)}
+.al2{display:flex;justify-content:space-between;align-items:center;gap:var(--s3);padding:7px 0;font-size:14.5px}
+.al2+.al2{border-top:1px solid var(--hair)}
+.al2 span small{display:block;font-size:12px;color:var(--mute)}
+.al2 .v{display:flex;align-items:center;gap:var(--s2)}
+.al2 em{font-style:normal;font-size:12px;color:var(--ink-2);background:var(--sand);border-radius:999px;padding:1px 8px}
+/* הוצאתי החודש: אייקון הוצאה בלי רקע */
+.dtop .ico{background:none;width:auto;height:auto;border-radius:0;font-size:36px;color:var(--ink)}
+.emptyx{padding:var(--s5) var(--s4);font-size:15px}
+.emptyx p{margin:0}
+.mt.hs{flex-wrap:nowrap;gap:6px}.mt.hs b{font-size:23px;white-space:nowrap}.mt.hs .st{width:28px;height:28px;flex:none}.mt.hs .sumbtn{padding:6px 11px;font-size:12.5px;white-space:nowrap}
