@@ -109,7 +109,8 @@ const Auth = {
       this._res = res; this._rej = rej; const hint = LS.get('hint', ''); this.tc.requestAccessToken(hint ? { prompt, hint } : { prompt });
     });
   },
-  token() { return this.valid() ? Promise.resolve(this.tok) : this.request(''); },      // חידוש שקט
+  // אין חידוש אוטומטי בלי נגיעה של המשתמשת: חלון גוגל שנפתח לבד נחסם, ומציק. החידוש נעשה בנגיעה הראשונה או בכפתור "להתחבר לגיליון"
+  token() { return this.valid() ? Promise.resolve(this.tok) : Promise.reject(authErr('פג תוקף ההתחברות')); },
   signIn() { return this.request(LS.get('hadAuth', false) ? '' : 'consent'); }          // בלחיצה של המשתמשת
 };
 
