@@ -479,7 +479,7 @@ const cnt = n => n === 1 ? 'סעיף אחד' : n + ' סעיפים';
 function eomSummary() {   // רק מה שהוגדר, עם וי; "לא נבחר" לא מוצג
   const c = eomCounts(), lines = [['carry', 'לגלגל לחודש הבא'], ['aside', 'לשים בצד'], ['ask', 'לשאול']].filter(([k]) => c[k] > 0);
   if (!lines.length) return '<p class="sp" style="margin-top:0">עוד לא הוגדרו סעיפים.</p>';
-  return `<div class="eoml">${lines.map(([k, t]) => `<div class="eol"><i class="ri-checkbox-circle-fill"></i><span>${t}</span><b>${cnt(c[k])}</b></div>`).join('')}</div>`;
+  return `<div class="eoml">${lines.map(([k, t]) => `<div class="eol"><i class="ri-checkbox-circle-fill"></i><b class="tg">${t}</b><b class="cn">${cnt(c[k])}</b></div>`).join('')}</div>`;
 }
 function eomRows() {
   const q = S.eq.trim();
@@ -544,7 +544,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = '1.7 · 7.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = '1.8 · 7.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
