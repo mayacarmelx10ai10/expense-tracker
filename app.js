@@ -470,11 +470,16 @@ function summaryScreen() {
   ${nav()}`;
 }
 function eomItems() { return [['שוטפות', S.data.variable], ['קבועות', S.data.fixed]]; }
-function eomSummary() {
-  const c = { carry: 0, aside: 0, ask: 0, '': 0 };
-  eomItems().forEach(([, gs]) => gs.forEach(g => g.items.forEach(i => c[eomRule(i.key)]++)));
-  const n = c.carry + c.aside + c.ask + c[''];
-  return n ? `${c.carry} לגלגל · ${c.aside} לשים בצד · ${c.ask} לשאול · ${c['']} לא נבחר` : 'הסעיפים ייטענו אחרי החיבור לגיליון.';
+function eomCounts() {
+  const c = { carry: 0, aside: 0, ask: 0 };
+  eomItems().forEach(([, gs]) => gs.forEach(g => g.items.forEach(i => { const r = eomRule(i.key); if (r) c[r]++; })));
+  return c;
+}
+const cnt = n => n === 1 ? 'סעיף אחד' : n + ' סעיפים';
+function eomSummary() {   // רק מה שהוגדר, עם וי; "לא נבחר" לא מוצג
+  const c = eomCounts(), lines = [['carry', 'לגלגל לחודש הבא'], ['aside', 'לשים בצד'], ['ask', 'לשאול']].filter(([k]) => c[k] > 0);
+  if (!lines.length) return '<p class="sp" style="margin-top:0">עוד לא הוגדרו סעיפים.</p>';
+  return `<div class="eoml">${lines.map(([k, t]) => `<div class="eol"><i class="ri-checkbox-circle-fill"></i><span>${t}</span><b>${cnt(c[k])}</b></div>`).join('')}</div>`;
 }
 function eomRows() {
   const q = S.eq.trim();
@@ -529,12 +534,12 @@ function settings() {
   <section class="sc2">
     <div class="sh2">${icon('calendar-check')}<b>סוף חודש</b></div>
     <p class="sp">לכל סעיף בוחרים מה קורה עם היתרה שלו בסוף החודש.</p>
-    <p class="sp" style="margin-top:0">${eomSummary()}</p>
-    <button class="btn sm o" data-act="eomScreen">הגדרת הסעיפים</button>
+    ${eomSummary()}
+    <button class="btn sm o" data-act="eomScreen">${(() => { const c = eomCounts(); return c.carry + c.aside + c.ask > 0 ? 'עדכון סעיפים' : 'הגדרת הסעיפים'; })()}</button>
   </section>
 
   ${!live && DEV ? `<section class="sc2"><div class="sh2">${icon('flask')}<b>הדגמה (פיתוח)</b></div><div class="brow"><button class="btn sm o" data-act="sample">הוצאות לדוגמה</button><button class="btn sm danger" data-act="resetDemo">איפוס</button></div></section>` : ''}
-  <div class="foot">גרסה ${APP_VERSION}</div>
+  <div class="foot">גרסה <span class="num">${APP_VERSION}</span></div>
   ${nav()}`;
 }
 
