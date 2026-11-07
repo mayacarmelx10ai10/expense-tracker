@@ -14,8 +14,25 @@
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" integrity="sha384-6FSSi597BTd6QcnsBNoLclRKxTOyyYqkaucRjFgCNr8wHVCp0COLClSPY4Vy/bjh" crossorigin="anonymous">
 <link href="app.css" rel="stylesheet">
+<style>
+#splash{position:fixed;inset:0;z-index:100;background:#FAF8F4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;font-family:Heebo,-apple-system,sans-serif;transition:opacity .35s ease}
+#splash.out{opacity:0;pointer-events:none}
+#splash .sp-coin{width:74px;height:74px;border-radius:50%;background:#FFE49A;color:#14161B;font:700 38px/74px Arial,sans-serif;text-align:center;animation:spBob 1.6s ease-in-out infinite}
+#splash .sp-bars{display:flex;flex-direction:column;gap:12px;width:min(240px,64vw)}
+#splash .sp-bars i{display:block;height:16px;border-radius:8px;background:#EFE9DC;overflow:hidden;position:relative}
+#splash .sp-bars i::after{content:"";position:absolute;inset:0;border-radius:8px;background:#14161B;transform-origin:right;transform:scaleX(0);animation:spFill 2.2s ease-in-out infinite}
+#splash .sp-bars i:nth-child(1)::after{--w:.78}
+#splash .sp-bars i:nth-child(2)::after{--w:.46;animation-delay:.25s}
+#splash .sp-bars i:nth-child(3)::after{--w:.9;background:#E2718A;animation-delay:.5s}
+#splash .sp-t{font-size:20px;font-weight:700;color:#14161B}
+#splash .sp-s{font-size:14px;color:#5E5A52;margin-top:-18px}
+@keyframes spFill{0%{transform:scaleX(0)}55%,80%{transform:scaleX(var(--w))}100%{transform:scaleX(0)}}
+@keyframes spBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@media (prefers-reduced-motion:reduce){#splash .sp-coin,#splash .sp-bars i::after{animation:none}#splash .sp-bars i::after{transform:scaleX(var(--w))}}
+</style>
 </head>
 <body>
+<div id="splash" role="status" aria-label="טוען את האפליקציה"><div class="sp-coin" aria-hidden="true">₪</div><div class="sp-bars" aria-hidden="true"><i></i><i></i><i></i></div><div class="sp-t">מעקב הוצאות עם מאיה</div><div class="sp-s">טוען את התקציב שלך…</div></div>
 <div id="app"></div>
 <div id="layer"></div>
 <div id="conn"></div>
