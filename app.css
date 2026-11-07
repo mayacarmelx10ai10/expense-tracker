@@ -437,3 +437,6 @@ input[type=search]::-webkit-search-cancel-button{display:none}
 .unsel{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--bad);color:#fff;font:700 12px/1 Arial,sans-serif;font-style:normal;flex:none}
 .rcount{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:var(--bad);color:#fff;font:700 13px/1 Arial,sans-serif;font-style:normal;flex:none}
 .eol .rcount{color:#fff;font-size:13px}
+.eol .cn{font-weight:400}
+.eol.bad i{color:var(--bad)}
+.eol.bad .tg{background:#FBE3E9;color:var(--bad)}

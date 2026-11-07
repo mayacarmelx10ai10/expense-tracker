@@ -481,7 +481,7 @@ function eomSummary() {   // מה שהוגדר עם וי, ואם יש סעיפי
   const lines = [['carry', 'לגלגל לחודש הבא'], ['aside', 'לשים בצד'], ['ask', 'לשאול']].filter(([k]) => c[k] > 0);
   if (!lines.length && !unsel) return '<p class="sp" style="margin-top:0">עוד לא הוגדרו סעיפים.</p>';
   const rows = lines.map(([k, t]) => `<div class="eol"><i class="ri-checkbox-circle-fill"></i><b class="tg">${t}</b><b class="cn">${cnt(c[k])}</b></div>`);
-  if (unsel > 0) rows.push(`<div class="eol"><i class="rcount">${unsel}</i><b class="tg">${unsel === 1 ? 'סעיף אחד עוד לא נבחר' : 'סעיפים עוד לא נבחרו'}</b></div>`);
+  if (unsel > 0) rows.push(`<div class="eol bad"><i class="ri-close-circle-fill"></i><b class="tg">${unsel === 1 ? 'לא נבחר' : 'לא נבחרו'}</b><b class="cn">${cnt(unsel)}</b></div>`);
   return `<div class="eoml">${rows.join('')}</div>`;
 }
 function eomRows() {
@@ -547,7 +547,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = '2.1 · 7.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = '2.2 · 7.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
