@@ -37,8 +37,9 @@
   const q = title => "'" + title + "'";
 
   /* ---------- Sheets API ---------- */
+  let apiCalls = 0;
   async function api(path, opts) {
-    opts = opts || {};
+    opts = opts || {}; apiCalls++;
     const token = await cfg.getToken();
     let url = 'https://sheets.googleapis.com/v4/spreadsheets/' + cfg.sheetId + path;
     if (opts.params) {
@@ -428,6 +429,6 @@
     }
   }
 
-  const Bridge = { configure: configure, call: call, _internals: { colIndex: colIndex, colLetter: colLetter, SHEETS: SHEETS } };
+  const Bridge = { configure: configure, call: call, _internals: { calls: () => apiCalls, colIndex: colIndex, colLetter: colLetter, SHEETS: SHEETS } };
   if (typeof module !== 'undefined' && module.exports) module.exports = Bridge; else root.Bridge = Bridge;
 })(typeof window !== 'undefined' ? window : globalThis);

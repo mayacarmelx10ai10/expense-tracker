@@ -195,6 +195,7 @@ async function connectFlow() {
   } catch (err) {
     S.conn = null; renderConn();
     if (err.code === 'auth') S.needAuth = true;
+    if (err.code === 'quota') { clearTimeout(load.qt); load.qt = setTimeout(() => { if (isLive() && !S.locked) load(S.month, true); }, 65000); }   // מנסה שוב לבד אחרי דקה
     S.error = err.code === 'quota' ? 'גוגל מגבילה את מספר הפניות בדקה. נסי שוב בעוד דקה.' : err.code === 'access' ? 'אין גישה לגיליון. בחרי אותו שוב.' : err.code === 'auth' ? null : (err instanceof TypeError ? 'אין חיבור לאינטרנט.' : 'לא הצלחתי לקרוא את הגיליון: ' + err.message);
     if (/חסרה לשונית|לא נמצא/.test(err.message || '')) { S.cfg = { sheetId: '', sheetName: '' }; LS.set('cfg', S.cfg); setupBridge(); S.error = 'זה לא נראה כמו גיליון התקציב: ' + err.message; }
     render();
@@ -547,7 +548,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = '2.2 · 7.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = '2.3 · 7.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
