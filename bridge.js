@@ -52,6 +52,7 @@
       const e = new Error((j.error && j.error.message) || ('שגיאה ' + r.status));
       if (r.status === 401) e.code = 'auth';
       if (r.status === 403 || r.status === 404) e.code = 'access';
+      if (r.status === 429) e.code = 'quota';
       throw e;
     }
     return j;
@@ -168,6 +169,10 @@
 
   /* ---------- תקציב: עמודה מוגדרת, וקפיאה לפי חודש (שינוי חל רק קדימה) ---------- */
   async function colHistory() {
+    if (cache.hist && Date.now() - cache.hist.at < 30000) return cache.hist.v;
+    const v = await colHistory0(); cache.hist = { at: Date.now(), v: v }; return v;
+  }
+  async function colHistory0() {
     await ensureSheet(SHEETS.SETTINGS, SETTINGS_HEADER);
     let rows = await getVals(q(SHEETS.SETTINGS) + '!A2:C200');
     if (!rows.some(r => trim(r[0]) === 'budgetColumn')) { await appendVals(SHEETS.SETTINGS, [['budgetColumn', DEFAULT_COL, 0]]); rows = [['budgetColumn', DEFAULT_COL, 0]]; }
@@ -182,10 +187,13 @@
     return { col: col, fixed: mod.fixed.list.map(it => num(it.row[idx])), variable: mod.variable.list.map(it => num(it.row[idx])) };
   }
   async function readSnap(mod, ym) {
+    cache.snaps = cache.snaps || {};
+    if (cache.snaps[ym]) return cache.snaps[ym];   // תקציב קפוא לא משתנה
     await ensureSheet(SHEETS.SNAP, SNAP_HEADER);
     const rows = (await getVals(q(SHEETS.SNAP) + '!A2:F5000')).filter(r => Number(r[0]) === ym);
     if (!rows.length) return null;
     const out = { col: '', fixed: mod.fixed.list.map(() => 0), variable: mod.variable.list.map(() => 0) };
+    cache.snaps[ym] = out;
     rows.forEach(r => {
       out.col = trim(r[5]) || out.col;
       const m = /^(fixed|var):(\d+)$/.exec(String(r[1])); if (!m) return;
@@ -200,6 +208,7 @@
     mod.fixed.list.forEach((it, i) => { if (live.fixed[i] > 0) rows.push([ym, 'fixed:' + it.n, it.group, it.name, live.fixed[i], live.col]); });
     mod.variable.list.forEach((it, i) => { if (live.variable[i] > 0) rows.push([ym, 'var:' + it.n, it.group, it.name, live.variable[i], live.col]); });
     await appendVals(SHEETS.SNAP, rows);
+    cache.snaps = cache.snaps || {}; cache.snaps[ym] = live;
     return live;
   }
   async function budgets(mod, ym) {
@@ -232,6 +241,7 @@
     const from = nextYm(cy);
     const hist = (await colHistory()).filter(h => h.from < from);
     if (colFor(hist, cy) !== col) hist.push({ col: col, from: from });
+    cache.hist = null;
     await api('/values/' + enc(q(SHEETS.SETTINGS) + '!A2:C200') + ':clear', { method: 'POST', body: {} });
     await putVals(q(SHEETS.SETTINGS) + '!A2', hist.map(h => ['budgetColumn', h.col, h.from]), 'RAW');
     return { ok: true, col: col, from: from };
@@ -254,6 +264,11 @@
   }
   /* גלגול: מה שנשאר (או חסר) בחודש שהסתיים עובר לחודש הבא, רק בסעיפים שנקבע להם "לגלגל" */
   async function carries(mod, mo, opts) {
+    const key = mo + '|' + JSON.stringify((opts && opts.rules) || {}) + '|' + JSON.stringify((opts && opts.decisions) || {});
+    if (cache.carry && cache.carry.key === key && Date.now() - cache.carry.at < 20000) return cache.carry.v;
+    const v = await carries0(mod, mo, opts); cache.carry = { key: key, at: Date.now(), v: v }; return v;
+  }
+  async function carries0(mod, mo, opts) {
     const order = monthOrder(mod), cur = finMonth(cfg.now(), mod.startDay);
     const tIdx = order.indexOf(mo), cIdx = order.indexOf(cur);
     const lim = Math.max(0, Math.min(tIdx, cIdx < 0 ? tIdx : cIdx));   // רק חודשים שהסתיימו
@@ -406,9 +421,9 @@
       case 'prefs': return prefs();
       case 'setPrefs': return setPrefs(p.prefs);
       case 'setBudgetColumn': cache.model = null; return setBudgetColumn(p.col);
-      case 'add': return add(p.entry);
-      case 'update': return update(p.entry);
-      case 'delete': return del(p.id);
+      case 'add': cache.carry = null; return add(p.entry);
+      case 'update': cache.carry = null; return update(p.entry);
+      case 'delete': cache.carry = null; return del(p.id);
       default: throw new Error('פעולה לא מוכרת');
     }
   }

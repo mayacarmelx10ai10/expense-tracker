@@ -195,7 +195,7 @@ async function connectFlow() {
   } catch (err) {
     S.conn = null; renderConn();
     if (err.code === 'auth') S.needAuth = true;
-    S.error = err.code === 'access' ? 'אין גישה לגיליון. בחרי אותו שוב.' : err.code === 'auth' ? null : (err instanceof TypeError ? 'אין חיבור לאינטרנט.' : 'לא הצלחתי לקרוא את הגיליון: ' + err.message);
+    S.error = err.code === 'quota' ? 'גוגל מגבילה את מספר הפניות בדקה. נסי שוב בעוד דקה.' : err.code === 'access' ? 'אין גישה לגיליון. בחרי אותו שוב.' : err.code === 'auth' ? null : (err instanceof TypeError ? 'אין חיבור לאינטרנט.' : 'לא הצלחתי לקרוא את הגיליון: ' + err.message);
     if (/חסרה לשונית|לא נמצא/.test(err.message || '')) { S.cfg = { sheetId: '', sheetName: '' }; LS.set('cfg', S.cfg); setupBridge(); S.error = 'זה לא נראה כמו גיליון התקציב: ' + err.message; }
     render();
   }
@@ -368,7 +368,7 @@ function home() {
 
 function card(item, isVar) {
   const v = view(item, isVar);
-  const alert = v.st === 'over' ? `<div class="al pink">חריגה של <span class="num">${fmt(-v.left)}</span></div>` : v.st === 'warn' ? '<div class="al amb">מתקרבת לתקרה</div>' : '';
+  const alert = v.st === 'over' ? `<div class="al pink">${v.carry < 0 ? 'במינוס' : 'חריגה של'} <span class="num">${fmt(v.left)}</span></div>` : v.st === 'warn' ? '<div class="al amb">מתקרבת לתקרה</div>' : '';
   return `<div class="sc ${v.st === 'over' ? 'ov' : ''}" data-act="open" data-k="${esc(item.key)}">
     <div class="tp"><div class="nm">${esc(item.name)}</div><button class="pls" data-act="add" data-k="${esc(item.key)}" aria-label="הוספת הוצאה ל${esc(item.name)}">+</button></div>
     <div class="am"><b class="num">${fmt(v.spent)}</b><span>מתוך <span class="num">${fmt(v.budget)}</span></span></div>
@@ -395,9 +395,9 @@ function detail() {
   <div class="card dcard" style="--c:${gi.c}">
     <div class="dtop"><span class="ico">${icon('bank-card')}</span><div><small>הוצאתי החודש</small><b class="big num">${fmt(item.spent)}</b></div><span class="pct ${v.st === 'over' ? 'over' : ''}">${Math.round(eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%</span></div>
     <div class="ln thick"><i style="width:${Math.min(100, eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%;background:${v.st === 'over' ? 'var(--pink)' : 'var(--ink)'}"></i></div>
-    ${item.carry ? `<p class="cx">${item.carry > 0 ? `נשארו ${fmt(item.carry)} מהחודש הקודם, והם התווספו לתקציב החודש.` : `היה חוסר של ${fmt(-item.carry)} בחודש הקודם, והוא הופחת מהתקציב החודש.`}</p>` : ''}
+    ${item.carry ? `<p class="cx">${item.carry > 0 ? `נשארו <span class="num">${fmt(item.carry)}</span> מהחודש הקודם, והם התווספו לתקציב החודש.` : `היה חוסר של <span class="num">${fmt(-item.carry)}</span> בחודש הקודם, והוא הופחת מהתקציב החודש.`}</p>` : ''}
     ${left < 0 && ruleFor(item.key) === 'aside' ? '<p class="cx neg">הסעיף במינוס, ולכן אי אפשר להפקיד. ההפקדה תחכה עד שיהיה פלוס.</p>' : ''}
-    <div class="dstats ${item.carry ? 'c3' : ''}"><div><small>התקציב</small><b class="num">${fmt(item.budget)}</b></div>${item.carry ? `<div><small>מגולגל</small><b class="num">${item.carry > 0 ? '+' : '−'}${fmt(Math.abs(item.carry)).replace('−', '')}</b></div>` : ''}${left >= 0 ? `<div><small>נשאר</small><b class="num">${fmt(left)}</b></div>` : `<div class="ov"><small>חריגה</small><b class="num">${fmt(-left)}</b></div>`}</div>
+    <div class="dstats ${item.carry ? 'c3' : ''}"><div><small>התקציב</small><b class="num">${fmt(item.budget)}</b></div>${item.carry ? `<div><small>מגולגל</small><b class="num">${item.carry > 0 ? '+' : '−'}${fmt(Math.abs(item.carry)).replace('−', '')}</b></div>` : ''}${left >= 0 ? `<div><small>נשאר</small><b class="num">${fmt(left)}</b></div>` : `<div class="ov"><small>${item.carry < 0 ? 'במינוס' : 'חריגה'}</small><b class="num">${fmt(left)}</b></div>`}</div>
     ${v.st === 'warn' ? '<div class="al amb" style="margin-top:12px">מתקרבת לתקרה</div>' : ''}</div>
   ${tagRows.length ? `<div class="secl">לפי תגית</div><div class="tgl">${tagRows.map(([t, a]) => `<div class="tr"><div><span>${esc(t)}</span><span class="tp2"><b class="num">${fmt(a)}</b><em>${Math.round(item.spent > 0 ? a / item.spent * 100 : 0)}%</em></span></div><div class="ln"><i style="width:${a / mx * 100}%"></i></div></div>`).join('')}</div>` : ''}
   ${ents.length ? '<div class="secl">ההוצאות החודש</div>' : ''}
@@ -500,7 +500,7 @@ function eomScreen() {
   <div class="dt"><div><b>סוף חודש</b><span>מה עושים עם היתרה בכל סעיף</span></div></div>
   <div class="ps" id="ps">${prefsStatusHtml()}</div>
   <section class="sc2 help">${EOM_HELP.map(([t, d]) => `<div class="hl"><b>${t}</b><span>${d}</span></div>`).join('')}</section>
-  <section class="sc2 eg"><div class="er"><span class="en2"><b>כל הסעיפים</b><small class="ea">בחירה כאן משנה את כולם</small></span>${segAll}</div></section>
+  <section class="sc2 eg"><div class="er"><span class="en2"><b>עדכון סוף חודש לכל הסעיפים</b><small class="ea">בחירה כאן משנה את כולם</small></span>${segAll}</div></section>
   ${searchField('eq', 'חיפוש סעיף', S.eq, 'clearEq')}
   <div id="eomrows">${eomRows()}</div>
   <div class="foot">הבחירה נשמרת בגיליון, ומתעדכנת בכל המכשירים.</div>
@@ -544,7 +544,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = '1.9 · 7.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = '2.0 · 7.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -846,9 +846,9 @@ document.addEventListener('pointerdown', async ev => {
 });
 window.addEventListener('online', () => { if (isLive()) flush(); });
 // מעודכן כל הזמן: בחזרה לאפליקציה, וגם בזמן שהיא פתוחה, קוראים מחדש מהגיליון (הוצאות שהוזנו במקום אחר, עריכות בגיליון)
-function refreshIfIdle() { if (isLive() && !S.locked && !S.sheet && !flushing && !S.pending.length && !S.needAuth && !S.loading && document.visibilityState === 'visible') load(S.month, true); }
+function refreshIfIdle() { if (isLive() && !S.locked && Date.now() - (S.lastSync || 0) > 40000 && !S.sheet && !flushing && !S.pending.length && !S.needAuth && !S.loading && document.visibilityState === 'visible') load(S.month, true); }
 document.addEventListener('visibilitychange', refreshIfIdle);
-setInterval(refreshIfIdle, 45000);
+setInterval(refreshIfIdle, 60000);
 setInterval(() => { const e = $('#sp'); if (e) e.innerHTML = syncPill(); paintPrefs(); }, 20000);   // הזמן שליד "מעודכן" מתקדם גם בלי רענון
 
 function sampleData() {
