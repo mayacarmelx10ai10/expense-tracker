@@ -413,3 +413,10 @@ input[type=search]::-webkit-search-cancel-button{display:none}
 .acc summary span small{display:block;font-size:12px;color:var(--mute);font-weight:400}
 .noexp{color:var(--line);display:block;margin:0 auto var(--s3)}
 .dtop .ico{font-size:34px}
+
+/* התרעת חודש חדש: אנימציה שמושכת את העין */
+.banner.soft{animation:bnIn .5s cubic-bezier(.2,1.4,.4,1) both}
+.banner.soft>i{animation:bnWiggle 2.4s ease-in-out 1s infinite}
+.banner.soft .go{animation:nmPulse 1.8s ease-out 1s infinite}
+@keyframes nmPulse{0%{box-shadow:0 0 0 0 rgba(255,228,154,.8)}70%,100%{box-shadow:0 0 0 14px rgba(255,228,154,0)}}
+@media (prefers-reduced-motion:reduce){.banner.soft,.banner.soft>i,.banner.soft .go{animation:none}}

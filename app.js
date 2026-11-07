@@ -300,7 +300,7 @@ function newMonthNotice() {
   const seen = LS.get('seenYm', 0);
   if (!seen || seen >= S.curYm) return '';
   const prev = S.month === 1 ? 12 : S.month - 1;
-  return `<div class="banner soft"><i class="ri-calendar-event-fill"></i><span>התחיל ${MONTHS[S.month - 1]}. סיכום ${MONTHS[prev - 1]} ממתין לך.</span><button class="go" data-act="summaryPrev">לסיכום</button><button class="x" data-act="dismissNew" aria-label="סגירה">${icon('close')}</button></div>`;
+  return `<div class="banner soft"><i class="ri-calendar-event-fill"></i><span>סיכום ${MONTHS[prev - 1]} מחכה לך</span><button class="go" data-act="summaryPrev">לסיכום</button><button class="x" data-act="dismissNew" aria-label="סגירה">${icon('close')}</button></div>`;
 }
 function banners() {
   let h = newMonthNotice();
@@ -447,7 +447,7 @@ function summaryScreen() {
   const done = S.curYm && S.ym < S.curYm;
   const amt = n => `<b class="num">${fmt(Math.abs(n))}</b>`;
   const rd = n => Math.round(n * 100) / 100;
-  const toggle = (key, val) => { const d = dep[key]; return d ? `<button class="chk on" data-act="undepo" data-k="${esc(key)}" aria-label="ביטול סימון">${icon('check')}הופקד · ${esc(d.day)}</button>` : `<button class="chk" data-act="depo" data-k="${esc(key)}" data-v="${rd(val)}">${icon('cash')}הפקדתי</button>`; };
+  const toggle = (key, val) => { const d = dep[key]; return d ? `<button class="chk on" data-act="undepo" data-k="${esc(key)}" aria-label="ביטול סימון">${icon('check')}הופקד · ${esc(d.day)}</button>` : `<button class="chk" data-act="depo" data-k="${esc(key)}" data-v="${rd(val)}">${icon('coins')}הפקדתי</button>`; };
   const depRow = r => `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}</small></span><div class="dpr">${amt(dep[r.key] ? dep[r.key].amt : left(r))}${toggle(r.key, left(r))}</div></div>`;
   const carryRow = `<div class="er hot"><span class="en2"><b>היתרה שמתגלגלת לחודש הבא</b><small class="ea">סכום גדול. מומלץ להפקיד אותו בצד עד החודש הבא.</small></span><div class="dpr">${amt(dep._carry ? dep._carry.amt : carryPos)}${toggle('_carry', carryPos)}</div></div>`;
   const negRow = r => `<div class="er negrow"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}</small></span><b class="num neg">${fmt(left(r))}</b></div>`;
