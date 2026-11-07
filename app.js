@@ -404,6 +404,7 @@ const EOM_HELP = [
 ];
 const eomRule = k => { const v = S.eomRules[k]; return v === 'box' ? 'aside' : v === 'part' ? 'ask' : EOM[v] ? v : ''; };   // ערכים מגרסאות קודמות
 /* ---------- סיכום חודש: חריגות, היתרה שלא נוצלה, הפקדות בצד, והחלטות ---------- */
+const LARGE_CARRY = 500;   // מגולגל מעל הסכום הזה מקבל התרעה עם המלצה להפקיד
 const ruleFor = key => (S.decisions[S.ym] && S.decisions[S.ym][key]) || eomRule(key);
 const nowDay = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return d.getDate() + '/' + (d.getMonth() + 1); };
 /* סיכום החודש מופיע רק ביום האחרון של החודש הפיננסי (בהדגמה תמיד, לבדיקה) */
@@ -430,6 +431,9 @@ function summaryScreen() {
   const askRows = rows.filter(r => r.rule === 'ask' && left(r) > 0.005);   // רק מי שבחרת עבורו "לשאול"
   const negAside = rows.filter(r => (r.rule === 'aside') && left(r) < -0.005);
   const carryRows = rows.filter(r => Math.abs(left(r)) > 0.005 && (r.rule === 'carry' || ((r.rule === 'aside' || r.rule === 'ask') && left(r) < 0)));   // חוסר בסעיף שלשים בצד מתגלגל, כי אי אפשר להפקיד מינוס
+  const carryPos = carryRows.filter(r => left(r) > 0.005).reduce((a, r) => a + left(r), 0);
+  const bigCarry = carryPos >= LARGE_CARRY;
+  const carryBox = bigCarry ? `<section class="warnbox"><i class="ri-error-warning-fill"></i><div><b>${fmt(carryPos)} מתגלגלים לחודש הבא</b><p>זה סכום גדול. מומלץ להפקיד אותו בצד עד החודש הבא, ולמשוך ממנו לפי הצורך.</p>${dep._carry ? `<button class="chk on" data-act="undepo" data-k="_carry" aria-label="ביטול סימון">${icon('check')} הופקד · ${esc(dep._carry.day)}</button>` : `<button class="chk" data-act="depo" data-k="_carry" data-v="${Math.round(carryPos * 100) / 100}">${icon('checkbox-blank-circle')} הפקדתי את זה</button>`}</div></section>` : '';
   const done = S.curYm && S.ym < S.curYm;
   const amt = n => `<b class="num">${fmt(Math.abs(n))}</b>`;
   const depRow = r => { const d = dep[r.key]; return `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}</small></span><div class="dpr">${amt(d ? d.amt : left(r))}${d ? `<button class="chk on" data-act="undepo" data-k="${esc(r.key)}" aria-label="ביטול סימון">${icon('check')} הופקד · ${esc(d.day)}</button>` : `<button class="chk" data-act="depo" data-k="${esc(r.key)}" data-v="${Math.round(left(r) * 100) / 100}">${icon('checkbox-blank-circle')} הפקדתי</button>`}</div></div>`; };
@@ -446,6 +450,7 @@ function summaryScreen() {
   </div>
   <div class="sleft"><small>נשאר כסף שהיה אמור להיות מוצא ולא הוצא</small><b class="num">${fmt(dep._all ? dep._all.amt : unspent)}</b><span>ב-${notAside.length} קטגוריות · לא כולל מה שמופקד בצד</span>
     <div class="sact">${dep._all ? `<button class="chk on" data-act="undepo" data-k="_all" aria-label="ביטול סימון">${icon('check')} הופקד · ${esc(dep._all.day)}</button>` : unspent > 0.005 ? `<button class="chk" data-act="depo" data-k="_all" data-v="${Math.round(unspent * 100) / 100}">${icon('checkbox-blank-circle')} הפקדתי את זה</button>` : ''}</div></div></div></section>
+  ${carryBox}
   ${sec('להפקיד בצד', asideRows, depRow, 'אפשר לסמן גם בחודש הבא, אחרי שנכנסת המשכורת.')}
   ${sec('במינוס: אי אפשר להפקיד', negAside, carryRow, 'הסעיפים האלה במינוס. אי אפשר להפקיד מינוס, אז החוסר מתגלגל לחודש הבא וההפקדה תחכה עד שיהיה פלוס.')}
   ${sec('צריך להחליט', askRows, askRow, 'מה לעשות עם מה שנשאר בסעיפים האלה.')}
