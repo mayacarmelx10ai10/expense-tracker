@@ -382,7 +382,7 @@ function detail() {
   <div class="dh"><button class="gb" data-act="back" aria-label="חזרה">${icon('arrow-right-s')}</button></div>
   <div class="dt" style="--c:${gi.c}"><span class="ci">${icon(gi.i)}</span><div><b>${esc(item.name)}</b><span>${esc(group)} · ${MONTHS[S.month - 1]}</span></div></div>
   <div class="card dcard" style="--c:${gi.c}">
-    <div class="dtop"><span class="ico">${icon('wallet-3')}</span><div><small>הוצאתי החודש</small><b class="big num">${fmt(item.spent)}</b></div><span class="pct ${v.st === 'over' ? 'over' : ''}">${Math.round(eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%</span></div>
+    <div class="dtop"><span class="ico">${icon('wallet-3')}</span><div><small>סך ההוצאות החודש</small><b class="big num">${fmt(item.spent)}</b></div><span class="pct ${v.st === 'over' ? 'over' : ''}">${Math.round(eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%</span></div>
     <div class="ln thick"><i style="width:${Math.min(100, eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%;background:${v.st === 'over' ? 'var(--pink)' : 'var(--ink)'}"></i></div>
     ${item.carry ? `<p class="cx">${item.carry > 0 ? `נשארו ${fmt(item.carry)} מהחודש הקודם, והם התווספו לתקציב החודש.` : `היה חוסר של ${fmt(-item.carry)} בחודש הקודם, והוא הופחת מהתקציב החודש.`}</p>` : ''}
     ${left < 0 && ruleFor(item.key) === 'aside' ? '<p class="cx neg">הסעיף במינוס, ולכן אי אפשר להפקיד. ההפקדה תחכה עד שיהיה פלוס.</p>' : ''}
@@ -674,7 +674,7 @@ function renderSheet() {
   const L = $('#layer');
   L.className = 'on';
   L.innerHTML = `<div class="scrim" data-act="closeSheet"></div><div class="sheet" role="dialog" aria-label="הוספת הוצאה"><div class="grab"></div>
-    <div class="shd" style="--c:${gi.c}"><span class="ci">${icon(gi.i)}</span><div><b>${f ? esc(f.item.name) : 'הוספת הוצאה'}</b><span class="s">${f ? `הוצאתי <span class="num">${fmt(f.item.spent)}</span> מתוך <span class="num">${fmt(f.item.budget)}</span>` : 'בחרי קטגוריה והקלידי סכום'}</span></div></div>
+    <div class="shd" style="--c:${gi.c}"><span class="ci">${icon(gi.i)}</span><div><b>${f ? esc(f.item.name) : 'הוספת הוצאה'}</b><span class="s">${f ? `הוצאות החודש: <span class="num">${fmt(f.item.spent)}</span> מתוך <span class="num">${fmt(f.item.budget)}</span>` : 'בחרי קטגוריה והקלידי סכום'}</span></div></div>
     <div class="amt num" id="amt">${esc(sh.amount || '0')}<u></u></div>
     ${sh.key ? '' : `<div class="field">${icon('search')}<input id="catq" type="text" placeholder="חיפוש קטגוריה" autocomplete="off"></div><div class="cl" id="catl">${catList('')}</div>`}
     <div class="field">${icon('calendar')}<input id="dt" type="datetime-local" value="${esc(sh.dt)}"></div>

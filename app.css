@@ -352,3 +352,6 @@ input,select,textarea{color:var(--ink)}
 .warnbox p{font-size:13.5px;color:var(--ink-2);line-height:1.5;margin:2px 0 var(--s3)}
 .ico{background:var(--c);display:flex;align-items:center;justify-content:center;flex:none;font-size:24px}
 .dtop{gap:8px}
+/* כרטיס הסעיף: בלי צבע הקטגוריה (ללא רקע סגול), אייקון ניטרלי */
+.dtop .ico{background:var(--sand);color:var(--ink)}
+.dstats>div{background:var(--sand-2)}
