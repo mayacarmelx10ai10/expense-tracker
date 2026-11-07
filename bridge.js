@@ -304,7 +304,7 @@
       });
       return groups;
     }
-    return { ok: true, month: mo, ym: ym, currentYm: curYm(mod), startDay: mod.startDay, currentMonth: curMonth, currentWeek: weekIdx(now, mod.startDay, curMonth), budgetColumn: b.col, budgetFrozen: b.frozen,
+    return { ok: true, month: mo, ym: ym, currentYm: curYm(mod), firstMonth: monthOrder(mod)[0] || 1, startDay: mod.startDay, currentMonth: curMonth, currentWeek: weekIdx(now, mod.startDay, curMonth), budgetColumn: b.col, budgetFrozen: b.frozen,
       fixed: group(mod.fixed.list, b.fixed, fa, false, cr.fixed), variable: group(mod.variable.list, b.variable, va, true, cr.variable) };
   }
 

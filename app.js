@@ -51,7 +51,7 @@ const S = {
   screen: 'home', detailKey: null, sheet: null,
   order: LS.get('order', { g: {}, i: {} }), tags: LS.get('tags', {}),
   pending: LS.get('pending', []), lastSync: LS.get('lastSync', null),
-  eomRules: LS.get('eomRules', {}), decisions: LS.get('decisions', {}), deposits: LS.get('deposits', {}), ym: 0, curYm: 0, locked: LS.get('locked', false), lockStage: 'welcome', pinEntry: '', pinMsg: '', pinFail: 0, pinUntil: 0, pinSetup: null, prefsTs: LS.get('prefsTs', 0), q: '', eq: '', error: null, loading: false, status: null, budgetCfg: null, preview: false, needAuth: false
+  eomRules: LS.get('eomRules', {}), decisions: LS.get('decisions', {}), deposits: LS.get('deposits', {}), ym: 0, curYm: 0, firstMonth: 0, locked: LS.get('locked', false), lockStage: 'welcome', pinEntry: '', pinMsg: '', pinFail: 0, pinUntil: 0, pinSetup: null, prefsTs: LS.get('prefsTs', 0), q: '', eq: '', error: null, loading: false, status: null, budgetCfg: null, preview: false, needAuth: false
 };
 const isLive = () => !!S.cfg.sheetId;
 // מצב הדגמה קיים רק לפיתוח ולעיצוב (כתובת עם ?demo). משתמשת רגילה חייבת להתחבר לגיליון.
@@ -73,7 +73,7 @@ const Demo = {
         return o;
       })
     }));
-    return { ok: true, month: mo, ym: 202600 + mo, currentYm: 202600 + cm, startDay: sd, currentMonth: cm, currentWeek: weekIdx(now, sd, cm), fixed: mk(this.snap.fixed, false), variable: mk(this.snap.variable, true) };
+    return { ok: true, month: mo, ym: 202600 + mo, currentYm: 202600 + cm, firstMonth: 1, startDay: sd, currentMonth: cm, currentWeek: weekIdx(now, sd, cm), fixed: mk(this.snap.fixed, false), variable: mk(this.snap.variable, true) };
   }
 };
 
@@ -217,7 +217,7 @@ async function pickSheet() {
 }
 
 function applyBudget(b) {
-  S.ym = b.ym || 0; S.curYm = b.currentYm || 0; S.month = b.month; S.startDay = b.startDay; S.current = { month: b.currentMonth, week: b.currentWeek };
+  S.ym = b.ym || 0; S.curYm = b.currentYm || 0; S.firstMonth = b.firstMonth || 0; S.month = b.month; S.startDay = b.startDay; S.current = { month: b.currentMonth, week: b.currentWeek };
   S.data = { fixed: b.fixed, variable: b.variable };
   S.preview = b.budgetFrozen === false;   // חודש עתידי: תצוגה מקדימה של התקציב
 }
@@ -349,7 +349,7 @@ function home() {
   <div id="tabs" ${S.q.trim() ? 'hidden' : ''}>
   <div class="seg"><button data-act="tab" data-v="var" class="${isVar ? 'on' : ''}">שוטפות</button><button data-act="tab" data-v="fixed" class="${!isVar ? 'on' : ''}">קבועות</button></div>
   ${isVar ? `<div class="seg sm"><button data-act="period" data-v="week" class="${S.period === 'week' ? 'on' : ''}" ${cur ? '' : 'disabled'}>שבוע</button><button data-act="period" data-v="month" class="${S.period === 'month' || !cur ? 'on' : ''}">חודש</button></div>` : ''}
-  <div class="bu2"><span>תקציב ${isVar ? 'שוטפות' : 'קבועות'} <b class="num">${fmt(total)}</b>${S.preview ? ' · תצוגה מקדימה' : ''}</span>${showSummary() ? `<button class="lnkp" data-act="summary">סיכום חודש ${icon('arrow-left-s')}</button>` : ''}</div>
+  <div class="bu2"><span>תקציב ${isVar ? 'שוטפות' : 'קבועות'} <b class="num">${fmt(total)}</b>${S.preview ? ' · תצוגה מקדימה' : ''}</span>${showSummary() === 'now' ? `<button class="lnkp" data-act="summary">סיכום ${S.curYm && S.ym < S.curYm ? (MONTHS[S.month - 1] || 'חודש') : 'חודש'} ${icon('arrow-left-s')}</button>` : showSummary() === 'prev' ? `<button class="lnkp" data-act="summaryPrev">סיכום חודש קודם ${icon('arrow-left-s')}</button>` : ''}</div>
   </div>
   <div class="cats" id="cats">${catsHtml()}</div>
   ${nav()}`;
@@ -382,9 +382,10 @@ function detail() {
   <div class="dh"><button class="gb" data-act="back" aria-label="חזרה">${icon('arrow-right-s')}</button></div>
   <div class="dt" style="--c:${gi.c}"><span class="ci">${icon(gi.i)}</span><div><b>${esc(item.name)}</b><span>${esc(group)} · ${MONTHS[S.month - 1]}</span></div></div>
   <div class="card dcard" style="--c:${gi.c}">
-    <div class="dtop"><span class="ico">${icon('hand-coin')}</span><div><small>הוצאתי החודש</small><b class="big num">${fmt(item.spent)}</b></div><span class="pct ${v.st === 'over' ? 'over' : ''}">${Math.round(eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%</span></div>
+    <div class="dtop"><span class="ico">${icon('wallet-3')}</span><div><small>הוצאתי החודש</small><b class="big num">${fmt(item.spent)}</b></div><span class="pct ${v.st === 'over' ? 'over' : ''}">${Math.round(eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%</span></div>
     <div class="ln thick"><i style="width:${Math.min(100, eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%;background:${v.st === 'over' ? 'var(--pink)' : 'var(--ink)'}"></i></div>
     ${item.carry ? `<p class="cx">${item.carry > 0 ? `נשארו ${fmt(item.carry)} מהחודש הקודם, והם התווספו לתקציב החודש.` : `היה חוסר של ${fmt(-item.carry)} בחודש הקודם, והוא הופחת מהתקציב החודש.`}</p>` : ''}
+    ${left < 0 && ruleFor(item.key) === 'aside' ? '<p class="cx neg">הסעיף במינוס, ולכן אי אפשר להפקיד. ההפקדה תחכה עד שיהיה פלוס.</p>' : ''}
     <div class="dstats ${item.carry ? 'c3' : ''}"><div><small>התקציב</small><b class="num">${fmt(item.budget)}</b></div>${item.carry ? `<div><small>מגולגל</small><b class="num">${item.carry > 0 ? '+' : '−'}${fmt(Math.abs(item.carry)).replace('−', '')}</b></div>` : ''}${left >= 0 ? `<div><small>נשאר</small><b class="num">${fmt(left)}</b></div>` : `<div class="ov"><small>חריגה</small><b class="num">${fmt(-left)}</b></div>`}</div>
     ${v.st === 'warn' ? '<div class="al amb" style="margin-top:12px">מתקרבת לתקרה</div>' : ''}</div>
   ${tagRows.length ? `<div class="secl">לפי תגית</div><div class="tgl">${tagRows.map(([t, a]) => `<div class="tr"><div><span>${esc(t)}</span><span class="tp2"><b class="num">${fmt(a)}</b><em>${Math.round(item.spent > 0 ? a / item.spent * 100 : 0)}%</em></span></div><div class="ln"><i style="width:${a / mx * 100}%"></i></div></div>`).join('')}</div>` : ''}
@@ -398,7 +399,7 @@ function detail() {
 const EOM = { carry: 'לגלגל לחודש הבא', aside: 'לשים בצד', ask: 'לשאול' };
 const EOM_HELP = [
   ['לגלגל לחודש הבא', 'היתרה עוברת לתקציב החודש הבא.'],
-  ['לשים בצד', 'היתרה מועברת לחשבון נפרד.'],
+  ['לשים בצד', 'היתרה מועברת לחשבון נפרד. אם הסעיף במינוס אי אפשר להפקיד, והחוסר מתגלגל עד שיהיה פלוס.'],
   ['לשאול', 'בסוף החודש האפליקציה שואלת מה לעשות.']
 ];
 const eomRule = k => { const v = S.eomRules[k]; return v === 'box' ? 'aside' : v === 'part' ? 'ask' : EOM[v] ? v : ''; };   // ערכים מגרסאות קודמות
@@ -407,10 +408,12 @@ const ruleFor = key => (S.decisions[S.ym] && S.decisions[S.ym][key]) || eomRule(
 const nowDay = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return d.getDate() + '/' + (d.getMonth() + 1); };
 /* סיכום החודש מופיע רק ביום האחרון של החודש הפיננסי (בהדגמה תמיד, לבדיקה) */
 function showSummary() {
-  if (DEV && !isLive()) return true;
+  if (DEV && !isLive()) return 'now';
+  if (S.curYm && S.ym < S.curYm) return 'now';                       // חודש שעבר: אפשר לסמן הפקדות
   if (S.month !== S.current.month) return false;
   const t = new Date(), tm = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1);
-  return finMonth(tm, S.startDay || 1) !== finMonth(t, S.startDay || 1);
+  if (finMonth(tm, S.startDay || 1) !== finMonth(t, S.startDay || 1)) return 'now';   // היום האחרון של החודש
+  return S.month !== S.firstMonth ? 'prev' : false;                   // בשאר הימים: סיכום החודש הקודם (ההפקדות נעשות אחרי המשכורת)
 }
 function summaryRows() {
   const rows = [];
@@ -425,6 +428,7 @@ function summaryScreen() {
   const unspent = notAside.reduce((a, r) => a + left(r), 0);
   const asideRows = rows.filter(r => r.rule === 'aside' && left(r) > 0.005);
   const askRows = rows.filter(r => r.rule === 'ask' && left(r) > 0.005);   // רק מי שבחרת עבורו "לשאול"
+  const negAside = rows.filter(r => (r.rule === 'aside') && left(r) < -0.005);
   const carryRows = rows.filter(r => Math.abs(left(r)) > 0.005 && (r.rule === 'carry' || ((r.rule === 'aside' || r.rule === 'ask') && left(r) < 0)));   // חוסר בסעיף שלשים בצד מתגלגל, כי אי אפשר להפקיד מינוס
   const done = S.curYm && S.ym < S.curYm;
   const amt = n => `<b class="num">${fmt(Math.abs(n))}</b>`;
@@ -442,7 +446,8 @@ function summaryScreen() {
   </div>
   <div class="sleft"><small>נשאר כסף שהיה אמור להיות מוצא ולא הוצא</small><b class="num">${fmt(dep._all ? dep._all.amt : unspent)}</b><span>ב-${notAside.length} קטגוריות · לא כולל מה שמופקד בצד</span>
     <div class="sact">${dep._all ? `<button class="chk on" data-act="undepo" data-k="_all" aria-label="ביטול סימון">${icon('check')} הופקד · ${esc(dep._all.day)}</button>` : unspent > 0.005 ? `<button class="chk" data-act="depo" data-k="_all" data-v="${Math.round(unspent * 100) / 100}">${icon('checkbox-blank-circle')} הפקדתי את זה</button>` : ''}</div></div></div></section>
-  ${sec('להפקיד בצד', asideRows, depRow, 'אחרי שהפקדת בפועל, סמני "הפקדתי".')}
+  ${sec('להפקיד בצד', asideRows, depRow, 'אפשר לסמן גם בחודש הבא, אחרי שנכנסת המשכורת.')}
+  ${sec('במינוס: אי אפשר להפקיד', negAside, carryRow, 'הסעיפים האלה במינוס. אי אפשר להפקיד מינוס, אז החוסר מתגלגל לחודש הבא וההפקדה תחכה עד שיהיה פלוס.')}
   ${sec('צריך להחליט', askRows, askRow, 'מה לעשות עם מה שנשאר בסעיפים האלה.')}
   ${sec('מתגלגל לחודש הבא', carryRows, carryRow, '')}
   ${over.length ? `<div class="secl">חרגו מהתקציב</div><section class="sc2 eg sr">${over.map(r => `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}</small></span><b class="num neg">${fmt(-left(r))}</b></div>`).join('')}</section>` : ''}
@@ -753,6 +758,7 @@ async function act(a, t) {
       if (isLive() && Auth.valid()) { try { S.budgetCfg = await call('settings'); render(); } catch (err) { if (err.code === 'auth') { S.needAuth = true; render(); } else toast('לא הצלחתי לטעון הגדרות: ' + err.message); } }
       break;
     case 'summary': S.screen = 'summary'; window.scrollTo(0, 0); render(); break;
+    case 'summaryPrev': await load(S.month === 1 ? 12 : S.month - 1); S.screen = 'summary'; window.scrollTo(0, 0); render(); break;
     case 'depo': { (S.deposits[S.ym] = S.deposits[S.ym] || {})[k] = { amt: Number(v), day: nowDay(), at: Date.now() }; LS.set('deposits', S.deposits); touchPrefs(); render(); break; }
     case 'undepo': if (S.deposits[S.ym]) { delete S.deposits[S.ym][k]; LS.set('deposits', S.deposits); touchPrefs(); render(); } break;
     case 'decide': (S.decisions[S.ym] = S.decisions[S.ym] || {})[k] = v; LS.set('decisions', S.decisions); touchPrefs(); reloadSoon(); render(); break;
