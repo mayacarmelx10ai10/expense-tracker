@@ -369,7 +369,7 @@ function nav() {
   return `<nav class="nav"><button class="${S.screen === 'home' ? 'on' : ''}" data-act="home">${icon('home-5')}בית</button><button class="fab" data-act="fab" aria-label="הוספת הוצאה">+</button><button class="${S.screen === 'settings' || S.screen === 'eom' ? 'on' : ''}" data-act="settings">${icon('settings-3')}הגדרות</button></nav>`;
 }
 
-const EMPTY_ART = '<svg viewBox="0 0 160 130" width="150" height="122" aria-hidden="true"><ellipse cx="80" cy="116" rx="46" ry="7" fill="#EFE9DC"/><circle cx="80" cy="68" r="44" fill="#FFE49A"/><circle cx="80" cy="68" r="34" fill="none" stroke="#14161B" stroke-opacity=".14" stroke-width="3"/><circle cx="66" cy="62" r="4.5" fill="#14161B"/><circle cx="94" cy="62" r="4.5" fill="#14161B"/><path d="M68 78 Q80 90 92 78" fill="none" stroke="#14161B" stroke-width="4" stroke-linecap="round"/><circle cx="58" cy="76" r="6" fill="#E2718A" opacity=".35"/><circle cx="102" cy="76" r="6" fill="#E2718A" opacity=".35"/><path d="M122 26 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#BBD6FF"/><path d="M30 40 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2z" fill="#DDD3FF"/></svg>';
+const EMPTY_ART = `<span class="emptyi">${icon('receipt')}</span>`;
 function detail() {
   const f = findItem(S.detailKey);
   if (!f) { S.screen = 'home'; return home(); }
@@ -383,7 +383,7 @@ function detail() {
   <div class="dh"><button class="gb" data-act="back" aria-label="חזרה">${icon('arrow-right-s')}</button></div>
   <div class="dt" style="--c:${gi.c}"><span class="ci">${icon(gi.i)}</span><div><b>${esc(item.name)}</b><span>${esc(group)} · ${MONTHS[S.month - 1]}</span></div></div>
   <div class="card dcard" style="--c:${gi.c}">
-    <div class="dtop"><span class="ico">${icon('wallet-3')}</span><div><small>סך ההוצאות החודש</small><b class="big num">${fmt(item.spent)}</b></div><span class="pct ${v.st === 'over' ? 'over' : ''}">${Math.round(eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%</span></div>
+    <div class="dtop"><span class="ico">${icon('bank-card')}</span><div><small>הוצאתי החודש</small><b class="big num">${fmt(item.spent)}</b></div><span class="pct ${v.st === 'over' ? 'over' : ''}">${Math.round(eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%</span></div>
     <div class="ln thick"><i style="width:${Math.min(100, eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%;background:${v.st === 'over' ? 'var(--pink)' : 'var(--ink)'}"></i></div>
     ${item.carry ? `<p class="cx">${item.carry > 0 ? `נשארו ${fmt(item.carry)} מהחודש הקודם, והם התווספו לתקציב החודש.` : `היה חוסר של ${fmt(-item.carry)} בחודש הקודם, והוא הופחת מהתקציב החודש.`}</p>` : ''}
     ${left < 0 && ruleFor(item.key) === 'aside' ? '<p class="cx neg">הסעיף במינוס, ולכן אי אפשר להפקיד. ההפקדה תחכה עד שיהיה פלוס.</p>' : ''}
@@ -405,7 +405,7 @@ const EOM_HELP = [
 ];
 const eomRule = k => { const v = S.eomRules[k]; return v === 'box' ? 'aside' : v === 'part' ? 'ask' : EOM[v] ? v : ''; };   // ערכים מגרסאות קודמות
 /* ---------- סיכום חודש: חריגות, היתרה שלא נוצלה, הפקדות בצד, והחלטות ---------- */
-const LARGE_CARRY = 500;   // מגולגל מעל הסכום הזה מקבל התרעה עם המלצה להפקיד
+const LARGE_CARRY = 300;   // מגולגל מעל הסכום הזה מקבל התרעה עם המלצה להפקיד
 const ruleFor = key => (S.decisions[S.ym] && S.decisions[S.ym][key]) || eomRule(key);
 const nowDay = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return d.getDate() + '/' + (d.getMonth() + 1); };
 /* סיכום החודש מופיע רק ביום האחרון של החודש הפיננסי (בהדגמה תמיד, לבדיקה) */
@@ -434,7 +434,7 @@ function summaryScreen() {
   const carryRows = rows.filter(r => Math.abs(left(r)) > 0.005 && (r.rule === 'carry' || ((r.rule === 'aside' || r.rule === 'ask') && left(r) < 0)));   // חוסר בסעיף שלשים בצד מתגלגל, כי אי אפשר להפקיד מינוס
   const carryPos = carryRows.filter(r => left(r) > 0.005).reduce((a, r) => a + left(r), 0);
   const bigCarry = carryPos >= LARGE_CARRY;
-  const carryBox = bigCarry ? `<section class="warnbox"><i class="ri-error-warning-fill"></i><div><b>${fmt(carryPos)} מתגלגלים לחודש הבא</b><p>זה סכום גדול. מומלץ להפקיד אותו בצד עד החודש הבא, ולמשוך ממנו לפי הצורך.</p>${dep._carry ? `<button class="chk on" data-act="undepo" data-k="_carry" aria-label="ביטול סימון">${icon('check')} הופקד · ${esc(dep._carry.day)}</button>` : `<button class="chk" data-act="depo" data-k="_carry" data-v="${Math.round(carryPos * 100) / 100}">${icon('checkbox-blank-circle')} הפקדתי את זה</button>`}</div></section>` : '';
+  const carryBox = bigCarry ? `<section class="warnbox"><i class="ri-error-warning-fill"></i><div><b>${fmt(carryPos)} מתגלגלים לחודש הבא</b><p>זה סכום גדול. מומלץ להפקיד אותו בצד עד החודש הבא.</p>${dep._carry ? `<button class="chk on" data-act="undepo" data-k="_carry" aria-label="ביטול סימון">${icon('check')} הופקד · ${esc(dep._carry.day)}</button>` : `<button class="chk" data-act="depo" data-k="_carry" data-v="${Math.round(carryPos * 100) / 100}">${icon('checkbox-blank-circle')} הפקדתי את זה</button>`}</div></section>` : '';
   const done = S.curYm && S.ym < S.curYm;
   const amt = n => `<b class="num">${fmt(Math.abs(n))}</b>`;
   const depRow = r => { const d = dep[r.key]; return `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}</small></span><div class="dpr">${amt(d ? d.amt : left(r))}${d ? `<button class="chk on" data-act="undepo" data-k="${esc(r.key)}" aria-label="ביטול סימון">${icon('check')} הופקד · ${esc(d.day)}</button>` : `<button class="chk" data-act="depo" data-k="${esc(r.key)}" data-v="${Math.round(left(r) * 100) / 100}">${icon('checkbox-blank-circle')} הפקדתי</button>`}</div></div>`; };
@@ -675,7 +675,7 @@ function renderSheet() {
   const L = $('#layer');
   L.className = 'on';
   L.innerHTML = `<div class="scrim" data-act="closeSheet"></div><div class="sheet" role="dialog" aria-label="הוספת הוצאה"><div class="grab"></div>
-    <div class="shd" style="--c:${gi.c}"><span class="ci">${icon(gi.i)}</span><div><b>${f ? esc(f.item.name) : 'הוספת הוצאה'}</b><span class="s">${f ? `הוצאות החודש: <span class="num">${fmt(f.item.spent)}</span> מתוך <span class="num">${fmt(f.item.budget)}</span>` : 'בחרי קטגוריה והקלידי סכום'}</span></div></div>
+    <div class="shd" style="--c:${gi.c}"><span class="ci">${icon(gi.i)}</span><div><b>${f ? esc(f.item.name) : 'הוספת הוצאה'}</b><span class="s">${f ? `הוצאתי <span class="num">${fmt(f.item.spent)}</span> מתוך <span class="num">${fmt(f.item.budget)}</span>` : 'בחרי קטגוריה והקלידי סכום'}</span></div></div>
     <div class="amt num" id="amt">${esc(sh.amount || '0')}<u></u></div>
     ${sh.key ? '' : `<div class="field">${icon('search')}<input id="catq" type="text" placeholder="חיפוש קטגוריה" autocomplete="off"></div><div class="cl" id="catl">${catList('')}</div>`}
     <div class="field">${icon('calendar')}<input id="dt" type="datetime-local" value="${esc(sh.dt)}"></div>

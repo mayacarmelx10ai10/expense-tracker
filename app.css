@@ -355,3 +355,5 @@ input,select,textarea{color:var(--ink)}
 /* כרטיס הסעיף: בלי צבע הקטגוריה (ללא רקע סגול), אייקון ניטרלי */
 .dtop .ico{background:var(--sand);color:var(--ink)}
 .dstats>div{background:var(--sand-2)}
+.emptyi{display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:20px;background:var(--sand);color:var(--mute);font-size:30px}
+.emptyx{padding:var(--s5) var(--s4)}
