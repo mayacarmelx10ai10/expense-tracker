@@ -387,3 +387,9 @@ input,select,textarea{color:var(--ink)}
 .emptyx{padding:var(--s5) var(--s4);font-size:15px}
 .emptyx p{margin:0}
 .mt.hs{flex-wrap:nowrap;gap:6px}.mt.hs b{font-size:23px;white-space:nowrap}.mt.hs .st{width:28px;height:28px;flex:none}.mt.hs .sumbtn{padding:6px 11px;font-size:12.5px;white-space:nowrap}
+
+/* התרעת חודש חדש: דקה, לא חוסמת, אפשר לסגור */
+.banner.soft{align-items:center;background:var(--sand-2);border-color:var(--hair);color:var(--ink);padding:var(--s2) var(--s3)}
+.banner.soft>i{font-size:20px;color:var(--ink-2)}
+.banner.soft .go{font-size:13px;font-weight:600;text-decoration:none;background:var(--ink);color:#fff;border-radius:999px;padding:5px 12px}
+.banner.soft .x{font-size:18px;color:var(--mute);padding:2px}

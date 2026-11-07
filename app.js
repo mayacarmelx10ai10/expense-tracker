@@ -218,7 +218,8 @@ async function pickSheet() {
 }
 
 function applyBudget(b) {
-  S.ym = b.ym || 0; S.curYm = b.currentYm || 0; S.firstMonth = b.firstMonth || 0; S.month = b.month; S.startDay = b.startDay; S.current = { month: b.currentMonth, week: b.currentWeek };
+  S.ym = b.ym || 0; S.curYm = b.currentYm || 0; if (S.curYm && !LS.get('seenYm', 0)) LS.set('seenYm', S.curYm);   // התקנה ראשונה: בלי התרעה
+  S.firstMonth = b.firstMonth || 0; S.month = b.month; S.startDay = b.startDay; S.current = { month: b.currentMonth, week: b.currentWeek };
   S.data = { fixed: b.fixed, variable: b.variable };
   S.preview = b.budgetFrozen === false;   // חודש עתידי: תצוגה מקדימה של התקציב
 }
@@ -293,8 +294,15 @@ function syncPill() {
   return stale ? pill('warn', 'עודכן ' + ago) : pill('ok', 'מעודכן ' + ago);
 }
 
+function newMonthNotice() {
+  if (!isLive() || !S.curYm || S.ym !== S.curYm || S.month === S.firstMonth) return '';
+  const seen = LS.get('seenYm', 0);
+  if (!seen || seen >= S.curYm) return '';
+  const prev = S.month === 1 ? 12 : S.month - 1;
+  return `<div class="banner soft"><i class="ri-calendar-event-fill"></i><span>התחיל ${MONTHS[S.month - 1]}. סיכום ${MONTHS[prev - 1]} ממתין לך.</span><button class="go" data-act="summaryPrev">לסיכום</button><button class="x" data-act="dismissNew" aria-label="סגירה">${icon('close')}</button></div>`;
+}
 function banners() {
-  let h = '';
+  let h = newMonthNotice();
   if (!isLive() && DEV) h += `<div class="banner urgent"><i class="ri-link-unlink"></i><span><b>לא מחובר לגיליון</b></span><button class="go" data-act="pick">להתחבר לגיליון</button></div>`;
   if (S.needAuth) h += `<div class="banner urgent"><i class="ri-link-unlink"></i><span><b>לא מחובר לגיליון</b></span><button class="go" data-act="signin">להתחבר לגיליון</button></div>`;
   if (S.pending.length) h += `<div class="banner"><i class="ri-cloud-off-fill"></i><span><b>${S.pending.length} הוצאות ממתינות</b> לסנכרון עם הגיליון.</span><button class="go" data-act="retry">נסי שוב</button></div>`;
@@ -345,7 +353,7 @@ function home() {
   <div class="mt ${showSummary() ? 'hs' : ''}"><button class="st" data-act="prev" ${S.month <= 1 ? 'disabled' : ''} aria-label="חודש קודם">${icon('arrow-right-s')}</button>
     <b>${MONTHS[S.month - 1] || ''} ${new Date().getFullYear()}</b>
     <button class="st" data-act="next" ${S.month >= 12 ? 'disabled' : ''} aria-label="חודש הבא">${icon('arrow-left-s')}</button>
-    ${showSummary() === 'now' ? `<button class="sumbtn" data-act="summary">${icon('file-list-3')}סיכום ${S.curYm && S.ym < S.curYm ? (MONTHS[S.month - 1] || 'חודש') : 'החודש'}</button>` : showSummary() === 'prev' ? `<button class="sumbtn" data-act="summaryPrev">${icon('file-list-3')}סיכום ${MONTHS[(S.month === 1 ? 12 : S.month - 1) - 1]}</button>` : ''}</div>
+    ${showSummary() ? `<button class="sumbtn" data-act="summary">${icon('file-list-3')}סיכום ${S.curYm && S.ym < S.curYm ? (MONTHS[S.month - 1] || 'חודש') : 'החודש'}</button>` : ''}</div>
   ${banners()}
   <div class="field srch">${icon('search')}<input id="hq" type="search" placeholder="חיפוש בשוטפות ובקבועות" autocomplete="off" value="${esc(S.q)}"></div>
   <div id="tabs" ${S.q.trim() ? 'hidden' : ''}>
@@ -412,11 +420,10 @@ const nowDay = () => { const d = new Date(), p = n => String(n).padStart(2, '0')
 /* סיכום החודש מופיע רק ביום האחרון של החודש הפיננסי (בהדגמה תמיד, לבדיקה) */
 function showSummary() {
   if (DEV && !isLive()) return 'now';
-  if (S.curYm && S.ym < S.curYm) return 'now';                       // חודש שעבר: אפשר לסמן הפקדות
+  if (S.curYm && S.ym < S.curYm) return 'now';                       // צפייה בחודש שעבר: הסיכום שלו
   if (S.month !== S.current.month) return false;
   const t = new Date(), tm = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1);
-  if (finMonth(tm, S.startDay || 1) !== finMonth(t, S.startDay || 1)) return 'now';   // היום האחרון של החודש
-  return S.month !== S.firstMonth ? 'prev' : false;                   // בשאר הימים: סיכום החודש הקודם (ההפקדות נעשות אחרי המשכורת)
+  return finMonth(tm, S.startDay || 1) !== finMonth(t, S.startDay || 1) ? 'now' : false;   // היום האחרון של החודש
 }
 function summaryRows() {
   const rows = [];
@@ -767,7 +774,8 @@ async function act(a, t) {
       if (isLive() && Auth.valid()) { try { S.budgetCfg = await call('settings'); render(); } catch (err) { if (err.code === 'auth') { S.needAuth = true; render(); } else toast('לא הצלחתי לטעון הגדרות: ' + err.message); } }
       break;
     case 'summary': S.screen = 'summary'; window.scrollTo(0, 0); render(); break;
-    case 'summaryPrev': await load(S.month === 1 ? 12 : S.month - 1); S.screen = 'summary'; window.scrollTo(0, 0); render(); break;
+    case 'dismissNew': LS.set('seenYm', S.curYm); render(); break;
+    case 'summaryPrev': LS.set('seenYm', S.curYm); await load(S.month === 1 ? 12 : S.month - 1); S.screen = 'summary'; window.scrollTo(0, 0); render(); break;
     case 'depo': { (S.deposits[S.ym] = S.deposits[S.ym] || {})[k] = { amt: Number(v), day: nowDay(), at: Date.now() }; LS.set('deposits', S.deposits); touchPrefs(); render(); break; }
     case 'undepo': if (S.deposits[S.ym]) { delete S.deposits[S.ym][k]; LS.set('deposits', S.deposits); touchPrefs(); render(); } break;
     case 'decide': (S.decisions[S.ym] = S.decisions[S.ym] || {})[k] = v; LS.set('decisions', S.decisions); touchPrefs(); reloadSoon(); render(); break;
