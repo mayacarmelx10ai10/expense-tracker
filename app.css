@@ -450,3 +450,4 @@ body{touch-action:manipulation}
 .dpbox b{font-weight:700}
 .dpbox{background:var(--ok-bg);color:var(--ok-fg)}
 .dpbox b{color:var(--ok-fg)}
+.dpbox .dpt{display:flex;flex-direction:column;gap:2px;font-weight:600}.dpbox .dpt small{font-size:12px;font-weight:400;color:var(--ok-fg);line-height:1.4}
