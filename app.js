@@ -196,7 +196,7 @@ async function connectFlow() {
     S.conn = null; renderConn();
     if (err.code === 'auth') S.needAuth = true;
     if (err.code === 'quota') { clearTimeout(load.qt); load.qt = setTimeout(() => { if (isLive() && !S.locked) load(S.month, true); }, 65000); }   // מנסה שוב לבד אחרי דקה
-    S.error = err.code === 'quota' ? 'גוגל מגבילה את מספר הפניות בדקה. נסי שוב בעוד דקה.' : err.code === 'access' ? 'אין גישה לגיליון. בחרי אותו שוב.' : err.code === 'auth' ? null : (err instanceof TypeError ? 'אין חיבור לאינטרנט.' : 'לא הצלחתי לקרוא את הגיליון: ' + err.message);
+    S.error = err.code === 'quota' ? 'האפליקציה צריכה לנוח רגע. היא תנסה שוב לבד בעוד דקה.' : err.code === 'access' ? 'אין גישה לגיליון. בחרי אותו שוב.' : err.code === 'auth' ? null : (err instanceof TypeError ? 'אין חיבור לאינטרנט.' : 'לא הצלחתי לקרוא את הגיליון: ' + err.message);
     if (/חסרה לשונית|לא נמצא/.test(err.message || '')) { S.cfg = { sheetId: '', sheetName: '' }; LS.set('cfg', S.cfg); setupBridge(); S.error = 'זה לא נראה כמו גיליון התקציב: ' + err.message; }
     render();
   }
@@ -398,6 +398,7 @@ function detail() {
     <div class="ln thick"><i style="width:${Math.min(100, eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%;background:${v.st === 'over' ? 'var(--pink)' : 'var(--ink)'}"></i></div>
     ${item.carry ? `<p class="cx">${item.carry > 0 ? `נשארו <span class="num">${fmt(item.carry)}</span> מהחודש הקודם, והם התווספו לתקציב החודש.` : `היה חוסר של <span class="num">${fmt(-item.carry)}</span> בחודש הקודם, והוא הופחת מהתקציב החודש.`}</p>` : ''}
     ${left < 0 && ruleFor(item.key) === 'aside' ? '<p class="cx neg">הסעיף במינוס, ולכן אי אפשר להפקיד. ההפקדה תחכה עד שיהיה פלוס.</p>' : ''}
+    ${left > 0.005 && ruleFor(item.key) === 'aside' && ((S.curYm && S.ym < S.curYm) || showSummary() === 'now') ? `<div class="dpbox"><span>להפקיד בצד <b class="num">${fmt((S.deposits[S.ym] || {})[item.key] ? S.deposits[S.ym][item.key].amt : left)}</b></span>${depToggle(item.key, left)}</div>` : ''}
     <div class="dstats ${item.carry ? 'c3' : ''}"><div><small>התקציב</small><b class="num">${fmt(item.budget)}</b></div>${item.carry ? `<div><small>מגולגל</small><b class="num">${item.carry > 0 ? '+' : '−'}${fmt(Math.abs(item.carry)).replace('−', '')}</b></div>` : ''}${left >= 0 ? `<div><small>נשאר</small><b class="num">${fmt(left)}</b></div>` : `<div class="ov"><small>${item.carry < 0 ? 'במינוס' : 'חריגה'}</small><b class="num">${fmt(left)}</b></div>`}</div>
     ${v.st === 'warn' ? '<div class="al amb" style="margin-top:12px">מתקרבת לתקרה</div>' : ''}</div>
   ${tagRows.length ? `<div class="secl">לפי תגית</div><div class="tgl">${tagRows.map(([t, a]) => `<div class="tr"><div><span>${esc(t)}</span><span class="tp2"><b class="num">${fmt(a)}</b><em>${Math.round(item.spent > 0 ? a / item.spent * 100 : 0)}%</em></span></div><div class="ln"><i style="width:${a / mx * 100}%"></i></div></div>`).join('')}</div>` : ''}
@@ -431,6 +432,10 @@ function summaryRows() {
   const rows = [];
   [['שוטפות', S.data.variable], ['קבועות', S.data.fixed]].forEach(([t, gs]) => gs.forEach(g => g.items.forEach(i => rows.push({ ...i, group: g.name, type: t, rule: ruleFor(i.key) }))));
   return rows;
+}
+function depToggle(key, val) {
+  const d = (S.deposits[S.ym] || {})[key];
+  return d ? `<button class="chk on" data-act="undepo" data-k="${esc(key)}" aria-label="ביטול סימון">${icon('check')}הופקד · ${esc(d.day)}</button>` : `<button class="chk" data-act="depo" data-k="${esc(key)}" data-v="${Math.round(val * 100) / 100}">${icon('coins')}הפקדתי</button>`;
 }
 function summaryScreen() {
   const rows = summaryRows(), dep = S.deposits[S.ym] || {};
@@ -548,7 +553,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = '2.3 · 7.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = '2.4 · 8.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },

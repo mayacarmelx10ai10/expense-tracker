@@ -440,3 +440,11 @@ input[type=search]::-webkit-search-cancel-button{display:none}
 .eol .cn{font-weight:400}
 .eol.bad i{color:var(--bad)}
 .eol.bad .tg{background:#FBE3E9;color:var(--bad)}
+
+/* בלי זום אוטומטי בטלפון: שדות מעל 16px, ובלי גלילה רוחבית */
+input,select,textarea,.field input,.field select,.form input,.form textarea,.sel{font-size:16px}
+html,body{overflow-x:hidden;max-width:100vw}
+.sheet{max-width:min(520px,100vw)}
+body{touch-action:manipulation}
+.dpbox{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);margin-top:var(--s3);padding:var(--s3);background:var(--warn-bg);border-radius:var(--r-ctl);font-size:14.5px}
+.dpbox b{font-weight:700}
