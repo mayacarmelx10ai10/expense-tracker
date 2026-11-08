@@ -553,7 +553,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = '2.5 · 8.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = '2.6 · 8.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -856,7 +856,16 @@ document.addEventListener('pointerdown', async ev => {
 window.addEventListener('online', () => { if (isLive()) flush(); });
 // מעודכן כל הזמן: בחזרה לאפליקציה, וגם בזמן שהיא פתוחה, קוראים מחדש מהגיליון (הוצאות שהוזנו במקום אחר, עריכות בגיליון)
 function refreshIfIdle() { if (isLive() && !S.locked && Date.now() - (S.lastSync || 0) > 40000 && !S.sheet && !flushing && !S.pending.length && !S.needAuth && !S.loading && document.visibilityState === 'visible') load(S.month, true); }
-document.addEventListener('visibilitychange', refreshIfIdle);
+/* חזרה לאפליקציה אחרי הפסקה (יותר משתי דקות): חוזרים לחודש הנוכחי ולמסך הבית, כמו פתיחה חדשה */
+function backToNow() {
+  if (S.locked || !isLive()) return;
+  if (S.hiddenAt && Date.now() - S.hiddenAt > 120000) {
+    S.hiddenAt = 0; S.screen = 'home'; S.q = ''; S.eq = ''; closeSheet(); S.period = 'month';
+    load(undefined, true);
+  } else refreshIfIdle();
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') S.hiddenAt = Date.now(); else backToNow(); });
+window.addEventListener('pageshow', ev => { if (ev.persisted) backToNow(); });
 setInterval(refreshIfIdle, 60000);
 setInterval(() => { const e = $('#sp'); if (e) e.innerHTML = syncPill(); paintPrefs(); }, 20000);   // הזמן שליד "מעודכן" מתקדם גם בלי רענון
 
