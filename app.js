@@ -399,7 +399,11 @@ function detail() {
     ${item.carry ? `<p class="cx">${item.carry > 0 ? `נשארו <span class="num">${fmt(item.carry)}</span> מהחודש הקודם, והם התווספו לתקציב החודש.` : `היה חוסר של <span class="num">${fmt(-item.carry)}</span> בחודש הקודם, והוא הופחת מהתקציב החודש.`}</p>` : ''}
     ${left < 0 && ruleFor(item.key) === 'aside' ? '<p class="cx neg">הסעיף במינוס, ולכן אי אפשר להפקיד. ההפקדה תחכה עד שיהיה פלוס.</p>' : ''}
     <div class="dstats ${item.carry ? 'c3' : ''}"><div><small>התקציב</small><b class="num">${fmt(item.budget)}</b></div>${item.carry ? `<div><small>מגולגל</small><b class="num">${item.carry > 0 ? '+' : '−'}${fmt(Math.abs(item.carry)).replace('−', '')}</b></div>` : ''}${left >= 0 ? `<div><small>נשאר</small><b class="num">${fmt(left)}</b></div>` : `<div class="ov"><small>${item.carry < 0 ? 'במינוס' : 'חריגה'}</small><b class="num">${fmt(left)}</b></div>`}</div>
-    ${left > 0.005 && ruleFor(item.key) === 'aside' && ((S.curYm && S.ym < S.curYm) || showSummary() === 'now') ? `<div class="dpbox"><span class="dpt">להפקיד בצד <b class="num">${fmt((S.deposits[S.ym] || {})[item.key] ? S.deposits[S.ym][item.key].amt : left)}</b><small>היתרה מועברת לחשבון נפרד. סמני אחרי שהפקדת בפועל.</small></span>${depToggle(item.key, left)}</div>` : ''}
+    ${(() => {
+      const d = (S.deposits[S.ym] || {})[item.key], can = left > 0.005 && ruleFor(item.key) === 'aside' && ((S.curYm && S.ym < S.curYm) || showSummary() === 'now');
+      if (d) return `<div class="dpbox done">${icon('checkbox-circle')}<span>הופקד <b class="num">${fmt(d.amt)}</b> · ${esc(d.day)}</span><button class="lnk" data-act="undepo" data-k="${esc(item.key)}">ביטול</button></div>`;
+      return can ? `<div class="dpbox"><p class="why">מכיוון שלא משתמשים בסעיף הזה בכל חודש, מומלץ להעביר את היתרה לחשבון נפרד, כדי שתישמר עד שתצטרכו אותה.</p><button class="chk" data-act="depo" data-k="${esc(item.key)}" data-v="${Math.round(left * 100) / 100}">${icon('coins')}הפקדתי <b class="num">${fmt(left)}</b></button></div>` : '';
+    })()}
     ${v.st === 'warn' ? '<div class="al amb" style="margin-top:12px">מתקרבת לתקרה</div>' : ''}</div>
   ${tagRows.length ? `<div class="secl">לפי תגית</div><div class="tgl">${tagRows.map(([t, a]) => `<div class="tr"><div><span>${esc(t)}</span><span class="tp2"><b class="num">${fmt(a)}</b><em>${Math.round(item.spent > 0 ? a / item.spent * 100 : 0)}%</em></span></div><div class="ln"><i style="width:${a / mx * 100}%"></i></div></div>`).join('')}</div>` : ''}
   ${ents.length ? '<div class="secl">ההוצאות החודש</div>' : ''}
@@ -553,7 +557,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = '2.7 · 8.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = '2.8 · 8.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },

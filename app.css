@@ -451,3 +451,27 @@ body{touch-action:manipulation}
 .dpbox{background:var(--ok-bg);color:var(--ok-fg)}
 .dpbox b{color:var(--ok-fg)}
 .dpbox .dpt{display:flex;flex-direction:column;gap:2px;font-weight:600}.dpbox .dpt small{font-size:12px;font-weight:400;color:var(--ok-fg);line-height:1.4}
+.dpbox{align-items:flex-start}
+.dpbox .dpt{display:flex;flex-direction:column;gap:2px;font-weight:400}
+.dpbox .lbl{font-size:12.5px;color:var(--ok-fg);font-weight:400}
+.dpbox .amt{font-size:18px;font-weight:700;color:var(--ok-fg)}
+.dpbox .why{font-size:12.5px;line-height:1.45;color:var(--ok-fg);margin-top:2px}
+.dpbox .chk{flex:none;align-self:center}
+.dpbox{display:block}
+.dpbox .dph{display:flex;align-items:center;justify-content:space-between;gap:var(--s3)}
+.dpbox .dpt{display:flex;flex-direction:column;gap:2px}
+.dpbox p.why{margin:var(--s2) 0 0;font-size:12.5px;line-height:1.5;color:var(--ok-fg)}
+.dpbox .dpt{flex:none;min-width:max-content}
+.dpbox .amt{display:block;white-space:nowrap;text-align:right;line-height:1.2}
+
+/* הפקדה בדף הסעיף: צהוב עם הסבר, ואחרי הלחיצה ירוק קצר */
+.dpbox{display:block;background:var(--warn-bg);color:var(--ink)}
+.dpbox p.why{margin:0 0 var(--s3);font-size:13.5px;line-height:1.5;color:var(--ink)}
+.dpbox .chk{display:inline-flex}
+.dpbox .chk b{font-weight:700;margin-inline-start:2px}
+.dpbox.done{display:flex;align-items:center;gap:var(--s2);background:var(--ok-bg);color:var(--ok-fg);font-size:14.5px}
+.dpbox.done>i{font-size:22px}
+.dpbox.done>span{flex:1}
+.dpbox.done b{font-weight:700;color:var(--ok-fg)}
+.dpbox.done .lnk{margin:0;font-size:13px;color:var(--ok-fg)}
+.dpbox:not(.done) .chk b{color:var(--ink)}
