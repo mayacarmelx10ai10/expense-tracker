@@ -448,3 +448,5 @@ html,body{overflow-x:hidden;max-width:100vw}
 body{touch-action:manipulation}
 .dpbox{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);margin-top:var(--s3);padding:var(--s3);background:var(--warn-bg);border-radius:var(--r-ctl);font-size:14.5px}
 .dpbox b{font-weight:700}
+.dpbox{background:var(--ok-bg);color:var(--ok-fg)}
+.dpbox b{color:var(--ok-fg)}
