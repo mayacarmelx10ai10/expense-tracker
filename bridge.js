@@ -265,7 +265,7 @@
   }
   /* גלגול: מה שנשאר (או חסר) בחודש שהסתיים עובר לחודש הבא, רק בסעיפים שנקבע להם "לגלגל" */
   async function carries(mod, mo, opts) {
-    const key = mo + '|' + JSON.stringify((opts && opts.rules) || {}) + '|' + JSON.stringify((opts && opts.decisions) || {});
+    const key = mo + '|' + JSON.stringify((opts && opts.rules) || {}) + '|' + JSON.stringify((opts && opts.decisions) || {}) + '|' + JSON.stringify((opts && opts.deposits) || {});
     if (cache.carry && cache.carry.key === key && Date.now() - cache.carry.at < 20000) return cache.carry.v;
     const v = await carries0(mod, mo, opts); cache.carry = { key: key, at: Date.now(), v: v }; return v;
   }
@@ -273,7 +273,7 @@
     const order = monthOrder(mod), cur = finMonth(cfg.now(), mod.startDay);
     const tIdx = order.indexOf(mo), cIdx = order.indexOf(cur);
     const lim = Math.max(0, Math.min(tIdx, cIdx < 0 ? tIdx : cIdx));   // רק חודשים שהסתיימו
-    const rules = (opts && opts.rules) || {}, dec = (opts && opts.decisions) || {};
+    const rules = (opts && opts.rules) || {}, dec = (opts && opts.decisions) || {}, deps = (opts && opts.deposits) || {};
     const any = Object.keys(rules).some(k => rules[k] === 'carry' || rules[k] === 'aside' || rules[k] === 'ask') || Object.keys(dec).some(y => Object.keys(dec[y] || {}).length > 0);
     let cf = mod.fixed.list.map(() => 0), cv = mod.variable.list.map(() => 0);
     for (let i = 0; any && i < lim; i++) {
@@ -286,7 +286,13 @@
         // לגלגל: הכול עובר הלאה. לשים בצד: יתרה חיובית מופקדת, אבל אי אפשר להפקיד מינוס, אז חוסר מתגלגל עד שיש פלוס.
         // לשאול ללא החלטה: חוסר מתגלגל, יתרה חיובית מחכה להחלטה. לא נבחר: אין גלגול.
         if (rule === 'carry') return R;
-        if (rule === 'aside' || (rule === 'ask' && !decided)) return R < 0 ? R : 0;
+        // לשים בצד: יתרה חיובית שהופקדה בפועל נשארת שייכת לסעיף ומתגלגלת לחודש הבא (הכסף בחשבון הנפרד). מה שעוד לא סומן כהופקד לא מתגלגל.
+        if (rule === 'aside') {
+          if (R < 0) return R;
+          const pend = R - Math.max(0, c);   // מה שחדש החודש ועוד לא הופקד
+          return (pend <= 0.005 || (deps[ym] && deps[ym][key])) ? R : 0;
+        }
+        if (rule === 'ask' && !decided) return R < 0 ? R : 0;
         return 0;
       });
       cf = step(false, cf, bud.fixed, act.fixed); cv = step(true, cv, bud.variable, act.variable);
