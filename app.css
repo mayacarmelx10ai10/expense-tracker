@@ -475,3 +475,4 @@ body{touch-action:manipulation}
 .dpbox.done b{font-weight:700;color:var(--ok-fg)}
 .dpbox.done .lnk{margin:0;font-size:13px;color:var(--ok-fg)}
 .dpbox:not(.done) .chk b{color:var(--ink)}
+.banner.soft.nv>i{animation:none}

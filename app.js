@@ -52,7 +52,7 @@ const S = {
   screen: 'home', detailKey: null, sheet: null,
   order: LS.get('order', { g: {}, i: {} }), tags: LS.get('tags', {}),
   pending: LS.get('pending', []), lastSync: LS.get('lastSync', null),
-  eomRules: LS.get('eomRules', {}), decisions: LS.get('decisions', {}), deposits: LS.get('deposits', {}), ym: 0, curYm: 0, firstMonth: 0, locked: LS.get('locked', false), lockStage: 'welcome', pinEntry: '', pinMsg: '', pinFail: 0, pinUntil: 0, pinSetup: null, prefsTs: LS.get('prefsTs', 0), q: '', eq: '', error: null, loading: false, status: null, budgetCfg: null, preview: false, needAuth: false
+  newVersion: '', eomRules: LS.get('eomRules', {}), decisions: LS.get('decisions', {}), deposits: LS.get('deposits', {}), ym: 0, curYm: 0, firstMonth: 0, locked: LS.get('locked', false), lockStage: 'welcome', pinEntry: '', pinMsg: '', pinFail: 0, pinUntil: 0, pinSetup: null, prefsTs: LS.get('prefsTs', 0), q: '', eq: '', error: null, loading: false, status: null, budgetCfg: null, preview: false, needAuth: false
 };
 const isLive = () => !!S.cfg.sheetId;
 // מצב הדגמה קיים רק לפיתוח ולעיצוב (כתובת עם ?demo). משתמשת רגילה חייבת להתחבר לגיליון.
@@ -296,6 +296,17 @@ function syncPill() {
   return stale ? pill('warn', 'עודכן ' + ago) : pill('ok', 'מעודכן ' + ago);
 }
 
+/* גרסה חדשה: בודקים אם הקובץ באתר שונה ממה שרץ עכשיו, ומציגים הודעה קטנה שלא חוסמת */
+async function checkVersion() {
+  try {
+    const t = await (await fetch('app.js?v=' + Date.now(), { cache: 'no-store' })).text();
+    const m = /\/\*v\*\/'([^']+)'/.exec(t);
+    if (m && m[1] !== APP_VERSION && !S.newVersion) { S.newVersion = m[1]; if (S.screen === 'home' && !S.sheet) render(); }
+  } catch { /* בלי רשת: לא קריטי */ }
+}
+function newVersionNotice() {
+  return S.newVersion ? `<div class="banner soft nv"><i class="ri-refresh-fill"></i><span>יש גרסה חדשה של האפליקציה</span><button class="go" data-act="reloadApp">לרענון</button></div>` : '';
+}
 function newMonthNotice() {
   if (!isLive() || !S.curYm || S.ym !== S.curYm || S.month === S.firstMonth) return '';
   const seen = LS.get('seenYm', 0);
@@ -304,7 +315,7 @@ function newMonthNotice() {
   return `<div class="banner soft"><i class="ri-calendar-event-fill"></i><span>סיכום ${MONTHS[prev - 1]} מחכה לך</span><button class="go" data-act="summaryPrev">לסיכום</button><button class="x" data-act="dismissNew" aria-label="סגירה">${icon('close')}</button></div>`;
 }
 function banners() {
-  let h = newMonthNotice();
+  let h = newVersionNotice() + newMonthNotice();
   if (!isLive() && DEV) h += `<div class="banner urgent"><i class="ri-link-unlink"></i><span><b>לא מחובר לגיליון</b></span><button class="go" data-act="pick">להתחבר לגיליון</button></div>`;
   if (S.needAuth) h += `<div class="banner urgent"><i class="ri-link-unlink"></i><span><b>לא מחובר לגיליון</b></span><button class="go" data-act="signin">להתחבר לגיליון</button></div>`;
   if (S.pending.length) h += `<div class="banner"><i class="ri-cloud-off-fill"></i><span><b>${S.pending.length} הוצאות ממתינות</b> לסנכרון עם הגיליון.</span><button class="go" data-act="retry">נסי שוב</button></div>`;
@@ -558,7 +569,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = '3.6 · 8.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'3.8 · 8.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -801,6 +812,7 @@ async function act(a, t) {
     case 'clearQ': { S.q = ''; const i = $('#hq'); if (i) { i.value = ''; i.focus(); } renderCats(); t.hidden = true; break; }
     case 'clearEq': { S.eq = ''; const i = $('#eq'); if (i) { i.value = ''; i.focus(); } const r = $('#eomrows'); if (r) r.innerHTML = eomRows(); t.hidden = true; break; }
     case 'clearCat': { const i = $('#catq'), l = $('#catl'); if (i) { i.value = ''; i.focus(); } if (l) l.innerHTML = catList(''); t.hidden = true; break; }
+    case 'reloadApp': location.reload(); break;
     case 'lock': lockApp(); break;
     case 'unlockStart': if (PIN.get()) { S.lockStage = 'pin'; S.pinEntry = ''; S.pinMsg = ''; S.error = null; render(); } else finishUnlock(); break;
     case 'lockBack': S.lockStage = 'welcome'; S.pinEntry = ''; S.pinMsg = ''; render(); break;
@@ -870,6 +882,8 @@ function backToNow() {
   } else refreshIfIdle();
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') S.hiddenAt = Date.now(); else backToNow(); });
+setTimeout(checkVersion, 12000); setInterval(checkVersion, 10 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkVersion(); });
 window.addEventListener('pageshow', ev => { if (ev.persisted) backToNow(); });
 setInterval(refreshIfIdle, 60000);
 setInterval(() => { const e = $('#sp'); if (e) e.innerHTML = syncPill(); paintPrefs(); }, 20000);   // הזמן שליד "מעודכן" מתקדם גם בלי רענון
