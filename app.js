@@ -471,7 +471,7 @@ function summaryScreen() {
   const notAside = under.filter(r => r.rule !== 'aside');
   const unspent = notAside.reduce((a, r) => a + left(r), 0);
   const due = r => left(r) - Math.max(0, r.carry || 0);   // להפקדה: רק מה שחדש החודש, מה שהופקד קודם כבר בחשבון הנפרד
-  const asideRows = desc(rows.filter(r => r.rule === 'aside' && due(r) > E), due);
+  const asideRows = rows.filter(r => r.rule === 'aside' && due(r) > E).sort((x, y) => x.name.localeCompare(y.name, 'he'));   // לפי סדר האלף-בית
   const negAside = desc(rows.filter(r => r.rule === 'aside' && left(r) < -E), left);
   const askRows = desc(rows.filter(r => r.rule === 'ask' && left(r) > E), left);   // רק מי שבחרת עבורו "לשאול"
   const carryPos = rows.filter(r => r.rule === 'carry' && left(r) > E).reduce((a, r) => a + left(r), 0);
@@ -497,8 +497,7 @@ function summaryScreen() {
   <section class="sc2 accs">
     ${acc('חרגו מהתקציב', over.length, over.map(r => line(r, left(r), r.rule === 'carry' || r.rule === 'aside' || r.rule === 'ask' ? 'יגולגל כחוסר' : '')).join(''), 'over')}
     ${acc('הוצאו פחות מהמתוכנן', under.length, under.map(r => line(r, left(r), tag(r))).join(''))}
-    ${acc('נשאר כסף שלא הוצא', fmt(unspent), notAside.map(r => line(r, left(r), tag(r))).join(''), '', 'לא כולל מה שמופקד בצד')}
-    ${carryBox}
+    <div class="acc x${S.unspOpen ? ' open' : ''}"><button class="accb" data-act="tgacc" aria-expanded="${!!S.unspOpen}"><span>נשאר כסף שלא הוצא<small>לא כולל מה שמופקד בצד</small></span><b class="num">${fmt(unspent)}</b>${icon('arrow-down-s')}</button>${carryBox}<div class="accl">${notAside.map(r => line(r, left(r), tag(r))).join('') || '<p class="sp">אין</p>'}</div></div>
   </section>
   ${showDeposit ? `<div class="secl">כסף שנשאר בסעיפים שבחרת לשים בצד</div><section class="sc2 eg sr">${asideRows.length ? `<p class="sp">הפקדה לא נחשבת הוצאה: היא רק מונעת מהכסף להתערבב בשוטף, והיתרה ממשיכה לחודש הבא. סמני אחרי שהפקדת בפועל.</p>${asideRows.map(depRow).join('')}` : ''}${negAside.length ? `<p class="sp">הסעיפים האלה במינוס. אי אפשר להפקיד מינוס, אז החוסר מתגלגל לחודש הבא וההפקדה תחכה עד שיהיה פלוס.</p>${negAside.map(negRow).join('')}` : ''}</section>` : ''}
   ${sec('צריך להחליט', askRows, askRow, 'מה לעשות עם מה שנשאר בסעיפים האלה.')}
@@ -588,7 +587,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'4.8 · 9.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'4.9 · 9.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -817,6 +816,7 @@ async function act(a, t) {
     case 'prev': load(S.month - 1); break;
     case 'next': load(S.month + 1); break;
     case 'open': S.detailKey = k; S.screen = 'detail'; window.scrollTo(0, 0); render(); break;
+    case 'tgacc': S.unspOpen = !S.unspOpen; render(); break;
     case 'back': case 'home': S.screen = 'home'; render(); break;
     case 'settings':
       S.screen = 'settings'; window.scrollTo(0, 0); render();

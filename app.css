@@ -482,4 +482,12 @@ body{touch-action:manipulation}
 .inp{width:100%;border:1px solid var(--hair);border-radius:var(--r-ctl);padding:12px var(--s3);background:#fff;outline:0;font-size:16px;text-align:right;direction:rtl}
 
 /* קוביית ההפקדה בסיכום יושבת בתוך כרטיס הסיכום, מתחת לשורת "נשאר כסף שלא הוצא" */
-.accs .dpbox { margin: 4px 0 6px; }
+.accs .dpbox { margin: 0 0 var(--s3); }
+.acc .accb{width:100%;background:none;border:0;font:inherit;color:inherit;text-align:start;display:flex;align-items:center;gap:var(--s2);padding:var(--s3) 0;font-size:15px;cursor:pointer}
+.acc .accb span{flex:1}
+.acc .accb span small{display:block;font-size:12px;color:var(--mute);font-weight:400}
+.acc .accb b{font-size:22px;font-weight:700}
+.acc .accb i{font-size:20px;color:var(--mute);transition:transform .15s}
+.acc.x.open .accb i{transform:rotate(180deg)}
+.acc.x .accl{display:none}
+.acc.x.open .accl{display:block}
