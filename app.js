@@ -422,8 +422,8 @@ function detail() {
     <div class="dstats ${item.carry ? 'c3' : ''}"><div><small>התקציב</small><b class="num">${fmt(item.budget)}</b></div>${item.carry ? `<div><small>מגולגל</small><b class="num">${item.carry > 0 ? '+' : '−'}${fmt(Math.abs(item.carry)).replace('−', '')}</b></div>` : ''}${left >= 0 ? `<div><small>נשאר</small><b class="num">${fmt(left)}</b></div>` : `<div class="ov"><small>${item.carry < 0 ? 'במינוס' : 'חריגה'}</small><b class="num">${fmt(left)}</b></div>`}</div>
     ${(() => {
       const d = (S.deposits[S.ym] || {})[item.key], dueAmt = left - Math.max(0, item.carry || 0), can = dueAmt > 0.005 && ruleFor(item.key) === 'aside' && ((S.curYm && S.ym < S.curYm) || showSummary() === 'now');
-      if (d) return `<div class="dpbox done">${icon('checkbox-circle')}<span>הופקד <b class="num">${fmt(d.amt)}</b> · ${esc(d.day)}</span><button class="lnk" data-act="undepo" data-k="${esc(item.key)}">ביטול</button></div>`;
-      return can ? `<div class="dpbox"><p class="why">מכיוון שלא משתמשים בסעיף הזה בכל חודש, מומלץ להעביר את היתרה לחשבון נפרד, כדי שתישמר עד שתצטרכו אותה.<br><br>ההפקדה לא נחשבת הוצאה: הכסף נשאר שלך ומופיע בחודש הבא ב"נשאר".</p><button class="chk" data-act="depo" data-k="${esc(item.key)}" data-v="${Math.round(dueAmt * 100) / 100}">${icon('coins')}הפקדתי <b class="num">${fmt(dueAmt)}</b></button></div>` : '';
+      if (d) return `<div class="dpbox done">${icon('checkbox-circle')}<span>הופקד <b class="num">${fmt(d.amt)}</b> · ${esc(d.day)}${item.carry > 0.005 ? `<small style="display:block">בחשבון הנפרד אמורים להיות בסך הכול <span class="num">${fmt(left)}</span></small>` : ''}</span><button class="lnk" data-act="undepo" data-k="${esc(item.key)}">ביטול</button></div>`;
+      return can ? `<div class="dpbox"><p class="why">מכיוון שלא משתמשים בסעיף הזה בכל חודש, מומלץ להעביר את היתרה לחשבון נפרד, כדי שתישמר עד שתצטרכו אותה.<br><br>ההפקדה לא נחשבת הוצאה: הכסף נשאר שלך ומופיע בחודש הבא ב"נשאר".${item.carry > 0.005 ? `<br><br><b>בחשבון הנפרד אמורים להיות בסך הכול <span class="num">${fmt(left)}</span></b> אחרי ההפקדה (<span class="num">${fmt(item.carry)}</span> מחודשים קודמים ועוד <span class="num">${fmt(dueAmt)}</span> מהחודש).` : ''}</p><button class="chk" data-act="depo" data-k="${esc(item.key)}" data-v="${Math.round(dueAmt * 100) / 100}">${icon('coins')}הפקדתי <b class="num">${fmt(dueAmt)}</b></button></div>` : '';
     })()}
     ${v.st === 'warn' ? '<div class="al amb" style="margin-top:12px">מתקרבת לתקרה</div>' : ''}</div>
   ${tagRows.length ? `<div class="secl">לפי תגית</div><div class="tgl">${tagRows.map(([t, a]) => `<div class="tr"><div><span>${esc(t)}</span><span class="tp2"><b class="num">${fmt(a)}</b><em>${Math.round(item.spent > 0 ? a / item.spent * 100 : 0)}%</em></span></div><div class="ln"><i style="width:${a / mx * 100}%"></i></div></div>`).join('')}</div>` : ''}
@@ -480,7 +480,7 @@ function summaryScreen() {
   const amt = n => `<b class="num">${fmt(Math.abs(n))}</b>`;
   const rd = n => Math.round(n * 100) / 100;
   const toggle = (key, val) => { const d = dep[key]; return d ? `<button class="chk on" data-act="undepo" data-k="${esc(key)}" aria-label="ביטול סימון">${icon('check')}הופקד · ${esc(d.day)}</button>` : `<button class="chk" data-act="depo" data-k="${esc(key)}" data-v="${rd(val)}">${icon('coins')}הפקדתי</button>`; };
-  const depRow = r => `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}</small></span><div class="dpr">${amt(dep[r.key] ? dep[r.key].amt : due(r))}${toggle(r.key, due(r))}</div></div>`;
+  const depRow = r => `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}${r.carry > 0.005 ? ` · בחשבון הנפרד אמורים להיות בסך הכול ${fmt(left(r))}` : ''}</small></span><div class="dpr">${amt(dep[r.key] ? dep[r.key].amt : due(r))}${toggle(r.key, due(r))}</div></div>`;
   const carryRow = `<div class="er hot"><span class="en2"><b>היתרה שמתגלגלת לחודש הבא</b><small class="ea">סכום גדול. מומלץ להפקיד אותו בצד עד החודש הבא.</small></span><div class="dpr">${amt(dep._carry ? dep._carry.amt : carryPos)}${toggle('_carry', carryPos)}</div></div>`;
   const negRow = r => `<div class="er negrow"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}</small></span><b class="num neg">${fmt(left(r))}</b></div>`;
   const askRow = r => `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">נשאר ${fmt(left(r))}</small></span><div class="seg3"><button data-act="decide" data-k="${esc(r.key)}" data-v="carry">לגלגל</button><button data-act="decide" data-k="${esc(r.key)}" data-v="aside">לשים בצד</button></div></div>`;
@@ -585,7 +585,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'4.0 · 9.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'4.1 · 9.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
