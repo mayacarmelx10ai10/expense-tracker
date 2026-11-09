@@ -442,7 +442,7 @@ const EOM_HELP = [
 ];
 const eomRule = k => { const v = S.eomRules[k]; return v === 'box' ? 'aside' : v === 'part' ? 'ask' : EOM[v] ? v : ''; };   // ערכים מגרסאות קודמות
 /* ---------- סיכום חודש: חריגות, היתרה שלא נוצלה, הפקדות בצד, והחלטות ---------- */
-const LARGE_CARRY = 300;   // מגולגל מעל הסכום הזה מקבל התרעה עם המלצה להפקיד
+const LARGE_CARRY = 200;   // מגולגל מעל הסכום הזה מקבל התרעה עם המלצה להפקיד
 const ruleFor = key => (S.decisions[S.ym] && S.decisions[S.ym][key]) || eomRule(key);
 const nowDay = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return d.getDate() + '/' + (d.getMonth() + 1); };
 /* סיכום החודש מופיע רק ביום האחרון של החודש הפיננסי (בהדגמה תמיד, לבדיקה) */
@@ -481,7 +481,7 @@ function summaryScreen() {
   const rd = n => Math.round(n * 100) / 100;
   const toggle = (key, val) => { const d = dep[key]; return d ? `<button class="chk on" data-act="undepo" data-k="${esc(key)}" aria-label="ביטול סימון">${icon('check')}הופקד · ${esc(d.day)}</button>` : `<button class="chk" data-act="depo" data-k="${esc(key)}" data-v="${rd(val)}">${icon('coins')}הפקדתי</button>`; };
   const depRow = r => `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}${r.carry > 0.005 ? ` · בחשבון הנפרד אמורים להיות בסך הכול ${fmt(left(r))}` : ''}</small></span><div class="dpr">${amt(dep[r.key] ? dep[r.key].amt : due(r))}${toggle(r.key, due(r))}</div></div>`;
-  const carryRow = `<div class="er hot"><span class="en2"><b>להפקיד בצד את הכסף שלא הוצאת</b><small class="ea">נשארו כמה מאות שקלים, כדאי לשמור אותם בצד כדי שיהיה ממה לשלם בחודש הבא.</small></span><div class="dpr">${amt(dep._carry ? dep._carry.amt : carryPos)}${toggle('_carry', carryPos)}</div></div>`;
+  const carryRow = `<div class="er hot"><span class="en2"><b>להפקיד בצד את הכסף שלא הוצאת</b><small class="ea">נשארו כמה מאות שקלים, כדאי לשמור אותם בצד כדי שיהיה ממה לשלם בחודש הבא.<br>ההפקדה לא מתבצעת אוטומטית. סמני "הפקדתי" רק אחרי שהעברת בפועל.</small></span><div class="dpr">${amt(dep._carry ? dep._carry.amt : carryPos)}${toggle('_carry', carryPos)}</div></div>`;
   const negRow = r => `<div class="er negrow"><span class="en2">${esc(r.name)}<small class="ea">${esc(r.group)}</small></span><b class="num neg">${fmt(left(r))}</b></div>`;
   const askRow = r => `<div class="er"><span class="en2">${esc(r.name)}<small class="ea">נשאר ${fmt(left(r))}</small></span><div class="seg3"><button data-act="decide" data-k="${esc(r.key)}" data-v="carry">לגלגל</button><button data-act="decide" data-k="${esc(r.key)}" data-v="aside">לשים בצד</button></div></div>`;
   const line = (r, val, note) => `<div class="al2"><span>${esc(r.name)}<small>${esc(r.group)}</small></span><span class="v">${note ? `<em>${note}</em>` : ''}<b class="num ${val < 0 ? 'neg' : ''}">${fmt(val)}</b></span></div>`;
@@ -585,7 +585,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'4.4 · 9.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'4.5 · 9.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
