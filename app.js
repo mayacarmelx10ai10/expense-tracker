@@ -500,7 +500,7 @@ function summaryScreen() {
     ${acc('נשאר כסף שלא הוצא', fmt(unspent), notAside.map(r => line(r, left(r), tag(r))).join(''), '', 'לא כולל מה שמופקד בצד')}
   </section>
   ${carryBox}
-  ${showDeposit ? `<div class="secl">להפקיד בצד</div><section class="sc2 eg sr">${asideRows.length ? `<p class="sp">כסף שנשאר בסעיפים שבחרת לשים בצד.<br>הפקדה לא נחשבת הוצאה: היא רק מונעת מהכסף להתערבב בשוטף, והיתרה ממשיכה לחודש הבא. סמני אחרי שהפקדת בפועל.</p>${asideRows.map(depRow).join('')}` : ''}${negAside.length ? `<p class="sp">הסעיפים האלה במינוס. אי אפשר להפקיד מינוס, אז החוסר מתגלגל לחודש הבא וההפקדה תחכה עד שיהיה פלוס.</p>${negAside.map(negRow).join('')}` : ''}</section>` : ''}
+  ${showDeposit ? `<div class="secl">כסף שנשאר בסעיפים שבחרת לשים בצד</div><section class="sc2 eg sr">${asideRows.length ? `<p class="sp">הפקדה לא נחשבת הוצאה: היא רק מונעת מהכסף להתערבב בשוטף, והיתרה ממשיכה לחודש הבא. סמני אחרי שהפקדת בפועל.</p>${asideRows.map(depRow).join('')}` : ''}${negAside.length ? `<p class="sp">הסעיפים האלה במינוס. אי אפשר להפקיד מינוס, אז החוסר מתגלגל לחודש הבא וההפקדה תחכה עד שיהיה פלוס.</p>${negAside.map(negRow).join('')}` : ''}</section>` : ''}
   ${sec('צריך להחליט', askRows, askRow, 'מה לעשות עם מה שנשאר בסעיפים האלה.')}
   ${nav()}`;
 }
@@ -588,7 +588,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'4.6 · 9.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'4.7 · 9.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
