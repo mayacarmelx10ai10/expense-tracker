@@ -412,6 +412,13 @@
     const json = JSON.stringify(pr);
     if (json.length > 45000) throw new Error('ההעדפות גדולות מדי');
     await ensureSheet(SHEETS.SETTINGS, SETTINGS_HEADER);
+    // גיבוי: שומרים בצד את הגרסה עם הכי הרבה כללי סוף חודש, כדי שאפשר יהיה לשחזר אם מישהו דורס בטעות
+    const ruleCount = o => (o && o.eomRules) ? Object.keys(o.eomRules).length : 0;
+    const cur = await getVals(q(SHEETS.SETTINGS) + '!E2:E2'), bak = await getVals(q(SHEETS.SETTINGS) + '!G2:G2');
+    let oldP = null, bakP = null;
+    try { oldP = cur[0] && cur[0][0] ? JSON.parse(cur[0][0]) : null; } catch (e) { oldP = null; }
+    try { bakP = bak[0] && bak[0][0] ? JSON.parse(bak[0][0]) : null; } catch (e) { bakP = null; }
+    if (oldP && ruleCount(oldP) > ruleCount(pr) && ruleCount(oldP) >= ruleCount(bakP)) await putVals(q(SHEETS.SETTINGS) + '!G1:G2', [['גיבוי הגדרות סוף חודש (לא לערוך)'], [cur[0][0]]], 'RAW');
     await putVals(q(SHEETS.SETTINGS) + '!E1:E2', [['העדפות האפליקציה (לא לערוך)'], [json]], 'RAW');
     return { ok: true };
   }
@@ -424,6 +431,7 @@
       case 'settings': return settings();
       case 'prefs': return prefs();
       case 'setPrefs': return setPrefs(p.prefs);
+      case 'prefsBackup': { await ensureSheet(SHEETS.SETTINGS, SETTINGS_HEADER); const v = await getVals(q(SHEETS.SETTINGS) + '!G2:G2'); let o = null; try { o = v[0] && v[0][0] ? JSON.parse(v[0][0]) : null; } catch (e) { o = null; } return { ok: true, prefs: o }; }
       case 'setBudgetColumn': cache.model = null; return setBudgetColumn(p.col);
       case 'add': cache.carry = null; return add(p.entry);
       case 'update': cache.carry = null; return update(p.entry);

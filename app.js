@@ -126,7 +126,16 @@ function touchPrefs() {
 async function pushPrefs() {
   if (!isLive() || PT.busy || !LS.get('prefsDirty', false)) return;
   PT.busy = true; PT.status = 'saving'; paintPrefs();
-  try { await call('setPrefs', { prefs: prefsNow() }); LS.set('prefsDirty', false); PT.status = 'saved'; PT.at = Date.now(); LS.set('prefsSavedAt', PT.at); }
+  try {
+    /* מיזוג לפני שמירה: כללים/החלטות/הפקדות שקיימים בגיליון ולא אצלי נשארים (איחוד לפי מפתח), כדי שמכשיר עם הגדרות ריקות לא ימחק כללים */
+    const rem = (await call('prefs')).prefs;
+    if (rem) {
+      const mergeMonths = (r, l) => { const o = { ...r }; Object.keys(l || {}).forEach(m => { o[m] = { ...(r && r[m]), ...l[m] }; }); return o; };
+      S.eomRules = { ...(rem.eomRules || {}), ...S.eomRules };
+      S.decisions = mergeMonths(rem.decisions, S.decisions); S.deposits = mergeMonths(rem.deposits, S.deposits);
+      LS.set('eomRules', S.eomRules); LS.set('decisions', S.decisions); LS.set('deposits', S.deposits);
+    }
+    await call('setPrefs', { prefs: prefsNow() }); LS.set('prefsDirty', false); PT.status = 'saved'; PT.at = Date.now(); LS.set('prefsSavedAt', PT.at); }
   catch (e) { PT.status = 'error'; if (e.code === 'auth') S.needAuth = true; /* יישלח בפעם הבאה */ }
   finally { PT.busy = false; paintPrefs(); }
 }
@@ -576,7 +585,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'3.9 · 9.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'4.0 · 9.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
