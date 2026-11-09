@@ -403,6 +403,7 @@
   async function prefs() {
     await ensureSheet(SHEETS.SETTINGS, SETTINGS_HEADER);
     const v = await getVals(q(SHEETS.SETTINGS) + '!E2:E2');
+    cache.prefsRaw = { at: Date.now(), raw: v[0] && v[0][0] ? v[0][0] : '' };
     let out = null;
     try { out = v[0] && v[0][0] ? JSON.parse(v[0][0]) : null; } catch (e) { out = null; }
     return { ok: true, prefs: out };
@@ -414,12 +415,20 @@
     await ensureSheet(SHEETS.SETTINGS, SETTINGS_HEADER);
     // גיבוי: שומרים בצד את הגרסה עם הכי הרבה כללי סוף חודש, כדי שאפשר יהיה לשחזר אם מישהו דורס בטעות
     const ruleCount = o => (o && o.eomRules) ? Object.keys(o.eomRules).length : 0;
-    const cur = await getVals(q(SHEETS.SETTINGS) + '!E2:E2'), bak = await getVals(q(SHEETS.SETTINGS) + '!G2:G2');
-    let oldP = null, bakP = null;
-    try { oldP = cur[0] && cur[0][0] ? JSON.parse(cur[0][0]) : null; } catch (e) { oldP = null; }
-    try { bakP = bak[0] && bak[0][0] ? JSON.parse(bak[0][0]) : null; } catch (e) { bakP = null; }
-    if (oldP && ruleCount(oldP) > ruleCount(pr) && ruleCount(oldP) >= ruleCount(bakP)) await putVals(q(SHEETS.SETTINGS) + '!G1:G2', [['גיבוי הגדרות סוף חודש (לא לערוך)'], [cur[0][0]]], 'RAW');
+    // קריאה אחת בלבד (או בלי קריאה אם הערך נקרא ממש עכשיו), כדי לא לעבור את מכסת הקריאות של גוגל
+    let curRaw, bakRaw = null;
+    const pc = cache.prefsRaw;
+    if (pc && Date.now() - pc.at < 15000) curRaw = pc.raw;
+    else { const r = await batchVals([q(SHEETS.SETTINGS) + '!E2', q(SHEETS.SETTINGS) + '!G2']); curRaw = r[0][0] && r[0][0][0] ? r[0][0][0] : ''; bakRaw = r[1][0] && r[1][0][0] ? r[1][0][0] : ''; }
+    let oldP = null;
+    try { oldP = curRaw ? JSON.parse(curRaw) : null; } catch (e) { oldP = null; }
+    if (oldP && ruleCount(oldP) > ruleCount(pr)) {
+      if (bakRaw === null) { const g = await getVals(q(SHEETS.SETTINGS) + '!G2:G2'); bakRaw = g[0] && g[0][0] ? g[0][0] : ''; }
+      let bakP = null; try { bakP = bakRaw ? JSON.parse(bakRaw) : null; } catch (e) { bakP = null; }
+      if (ruleCount(oldP) >= ruleCount(bakP)) await putVals(q(SHEETS.SETTINGS) + '!G1:G2', [['גיבוי הגדרות סוף חודש (לא לערוך)'], [curRaw]], 'RAW');
+    }
     await putVals(q(SHEETS.SETTINGS) + '!E1:E2', [['העדפות האפליקציה (לא לערוך)'], [json]], 'RAW');
+    cache.prefsRaw = { at: Date.now(), raw: json };
     return { ok: true };
   }
   async function call(action, p) {
