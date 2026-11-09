@@ -480,3 +480,6 @@ body{touch-action:manipulation}
 /* מי הוסיף */
 .e .by{font-size:12px;color:var(--ink-2);margin-top:3px}
 .inp{width:100%;border:1px solid var(--hair);border-radius:var(--r-ctl);padding:12px var(--s3);background:#fff;outline:0;font-size:16px;text-align:right;direction:rtl}
+
+/* קוביית ההפקדה בסיכום יושבת בתוך כרטיס הסיכום, מתחת לשורת "נשאר כסף שלא הוצא" */
+.accs .dpbox { margin: 4px 0 6px; }
