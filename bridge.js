@@ -11,8 +11,8 @@
   'use strict';
 
   const SHEETS = { BUDGET: 'תקציב משק בית', FIXED: 'בקרה קבועות', VAR: 'בקרה משתנות', SUMMARY: 'סיכום בקרה קבועות ומשתנות', LOG: 'יומן הוצאות', SETTINGS: 'הגדרות אפליקציה', SNAP: 'תקציב לפי חודש' };
-  const LOG_HEADER = ['מזהה', 'תאריך ושעה', 'סוג', 'קבוצה', 'קטגוריה', 'סכום', 'תגיות', 'הערה', 'חודש', 'שבוע', 'יעד בבקרה', 'מפתח'];
-  const L = { ID: 0, DT: 1, TYPE: 2, GROUP: 3, NAME: 4, AMOUNT: 5, TAGS: 6, NOTE: 7, MONTH: 8, WEEK: 9, TARGET: 10, KEY: 11 };
+  const LOG_HEADER = ['מזהה', 'תאריך ושעה', 'סוג', 'קבוצה', 'קטגוריה', 'סכום', 'תגיות', 'הערה', 'חודש', 'שבוע', 'יעד בבקרה', 'מפתח', 'נוסף ע"י'];
+  const L = { ID: 0, DT: 1, TYPE: 2, GROUP: 3, NAME: 4, AMOUNT: 5, TAGS: 6, NOTE: 7, MONTH: 8, WEEK: 9, TARGET: 10, KEY: 11, BY: 12 };
   const SETTINGS_HEADER = ['הגדרה', 'ערך', 'בתוקף מחודש (שנה+חודש)'];
   const SNAP_HEADER = ['חודש (שנה+חודש)', 'מפתח', 'קבוצה', 'קטגוריה', 'תקציב', 'עמודה'];
   const DEFAULT_COL = 'F';
@@ -328,11 +328,11 @@
 
   async function entries(month) {
     await ensureSheet(SHEETS.LOG, LOG_HEADER);
-    const rows = await getVals(q(SHEETS.LOG) + '!A2:L20000');
+    const rows = await getVals(q(SHEETS.LOG) + '!A2:M20000');
     const out = [];
     rows.forEach(r => {
       if (month && Number(r[L.MONTH]) !== Number(month)) return;
-      out.push({ id: String(r[L.ID]), dt: String(r[L.DT]), key: String(r[L.KEY]), amount: num(r[L.AMOUNT]), tags: String(r[L.TAGS] || '').split(',').map(trim).filter(Boolean), note: String(r[L.NOTE] || '') });
+      out.push({ id: String(r[L.ID]), dt: String(r[L.DT]), key: String(r[L.KEY]), amount: num(r[L.AMOUNT]), tags: String(r[L.TAGS] || '').split(',').map(trim).filter(Boolean), note: String(r[L.NOTE] || ''), by: String(r[L.BY] || '') });
     });
     return { ok: true, entries: out };
   }
@@ -360,7 +360,7 @@
     await putVals(cell, [[formula]], 'USER_ENTERED');
   }
   const nowText = () => { const d = cfg.now(), p = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); };
-  const logRow = (e, t, amount) => [e.id, e.dt, t.isVar ? 'משתנה' : 'קבועה', t.item.group, t.item.name, amount, (e.tags || []).join(','), e.note || '', t.month, t.isVar ? t.week + 1 : '', t.ref, e.key];
+  const logRow = (e, t, amount) => [e.id, e.dt, t.isVar ? 'משתנה' : 'קבועה', t.item.group, t.item.name, amount, (e.tags || []).join(','), e.note || '', t.month, t.isVar ? t.week + 1 : '', t.ref, e.key, e.by || ''];
 
   async function findRow(id) {
     const ids = await getVals(q(SHEETS.LOG) + '!A2:A20000');
@@ -371,6 +371,7 @@
     await ensureSheet(SHEETS.LOG, LOG_HEADER);
     if (!e || !e.id) throw new Error('חסר מזהה');
     const amount = Number(e.amount); if (!(amount > 0)) throw new Error('הסכום חייב להיות גדול מאפס');
+    if (!cache.logHdr) { cache.logHdr = true; await putVals(q(SHEETS.LOG) + '!M1', [[LOG_HEADER[12]]], 'RAW'); }   // כותרת עמודת "נוסף ע"י" גם בגיליונות שנוצרו לפני כן
     if (await findRow(e.id) > 0) return { ok: true, duplicate: true };
     const mod = await model(), t = target(mod, e.key, parseDt(e.dt));
     await ensureFormula(t, e.key);
@@ -383,7 +384,7 @@
     const amount = Number(e.amount); if (!(amount > 0)) throw new Error('הסכום חייב להיות גדול מאפס');
     const mod = await model(), t = target(mod, e.key, parseDt(e.dt));
     await ensureFormula(t, e.key);
-    await putVals(q(SHEETS.LOG) + '!A' + row + ':L' + row, [logRow(e, t, amount)], 'RAW');
+    await putVals(q(SHEETS.LOG) + '!A' + row + ':M' + row, [logRow(e, t, amount)], 'RAW');
     return { ok: true };
   }
   async function del(id) {

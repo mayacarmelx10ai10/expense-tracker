@@ -476,3 +476,7 @@ body{touch-action:manipulation}
 .dpbox.done .lnk{margin:0;font-size:13px;color:var(--ok-fg)}
 .dpbox:not(.done) .chk b{color:var(--ink)}
 .banner.soft.nv>i{animation:none}
+
+/* מי הוסיף */
+.e .by{font-size:12px;color:var(--ink-2);margin-top:3px}
+.inp{width:100%;border:1px solid var(--hair);border-radius:var(--r-ctl);padding:12px var(--s3);background:#fff;outline:0;font-size:16px;text-align:right;direction:rtl}

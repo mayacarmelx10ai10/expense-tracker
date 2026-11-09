@@ -52,7 +52,7 @@ const S = {
   screen: 'home', detailKey: null, sheet: null,
   order: LS.get('order', { g: {}, i: {} }), tags: LS.get('tags', {}),
   pending: LS.get('pending', []), lastSync: LS.get('lastSync', null),
-  newVersion: '', eomRules: LS.get('eomRules', {}), decisions: LS.get('decisions', {}), deposits: LS.get('deposits', {}), ym: 0, curYm: 0, firstMonth: 0, locked: LS.get('locked', false), lockStage: 'welcome', pinEntry: '', pinMsg: '', pinFail: 0, pinUntil: 0, pinSetup: null, prefsTs: LS.get('prefsTs', 0), q: '', eq: '', error: null, loading: false, status: null, budgetCfg: null, preview: false, needAuth: false
+  newVersion: '', who: LS.get('who', ''), eomRules: LS.get('eomRules', {}), decisions: LS.get('decisions', {}), deposits: LS.get('deposits', {}), ym: 0, curYm: 0, firstMonth: 0, locked: LS.get('locked', false), lockStage: 'welcome', pinEntry: '', pinMsg: '', pinFail: 0, pinUntil: 0, pinSetup: null, prefsTs: LS.get('prefsTs', 0), q: '', eq: '', error: null, loading: false, status: null, budgetCfg: null, preview: false, needAuth: false
 };
 const isLive = () => !!S.cfg.sheetId;
 // מצב הדגמה קיים רק לפיתוח ולעיצוב (כתובת עם ?demo). משתמשת רגילה חייבת להתחבר לגיליון.
@@ -397,6 +397,7 @@ function detail() {
   if (!f) { S.screen = 'home'; return home(); }
   const { group, item, isVar } = f, gi = gInfo(group), v = view(item, isVar), eff = item.budget + (item.carry || 0), left = eff - item.spent;
   const ents = S.entries.filter(e => e.key === item.key).sort((a, b) => b.dt.localeCompare(a.dt));
+  const multi = new Set(S.entries.map(e => e.by).filter(Boolean)).size > 1;
   const byTag = {}; ents.forEach(e => (e.tags || []).forEach(t => { byTag[t] = (byTag[t] || 0) + e.amount; }));
   const tagRows = Object.entries(byTag).sort((a, b) => b[1] - a[1]);
   const mx = tagRows.length ? tagRows[0][1] : 1;
@@ -418,7 +419,7 @@ function detail() {
     ${v.st === 'warn' ? '<div class="al amb" style="margin-top:12px">מתקרבת לתקרה</div>' : ''}</div>
   ${tagRows.length ? `<div class="secl">לפי תגית</div><div class="tgl">${tagRows.map(([t, a]) => `<div class="tr"><div><span>${esc(t)}</span><span class="tp2"><b class="num">${fmt(a)}</b><em>${Math.round(item.spent > 0 ? a / item.spent * 100 : 0)}%</em></span></div><div class="ln"><i style="width:${a / mx * 100}%"></i></div></div>`).join('')}</div>` : ''}
   ${ents.length ? '<div class="secl">ההוצאות החודש</div>' : ''}
-  <div class="list">${ents.length ? ents.map(e => { const w = whenText(e.dt); return `<div class="e"><div>${esc(w.day)}<div class="tm"><span class="num">${w.time}</span></div>${(e.tags || []).length ? `<div class="etg">${e.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}${e.note ? `<div class="en">${esc(e.note)}</div>` : ''}</div>
+  <div class="list">${ents.length ? ents.map(e => { const w = whenText(e.dt); return `<div class="e"><div>${esc(w.day)}<div class="tm"><span class="num">${w.time}</span></div>${(e.tags || []).length ? `<div class="etg">${e.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}${e.note ? `<div class="en">${esc(e.note)}</div>` : ''}${multi && e.by ? `<div class="by">נוסף ע״י ${esc(e.by)}</div>` : ''}</div>
       <div class="ac"><b class="num">${fmt(e.amount)}</b><button data-act="edit" data-id="${esc(e.id)}" aria-label="עריכה">${icon('pencil')}</button><button data-act="del" data-id="${esc(e.id)}" aria-label="מחיקה">${icon('delete-bin-6')}</button></div></div>`; }).join('') : `<div class="emptyx">${EMPTY_ART}<p>עוד אין הוצאות החודש</p></div>`}</div>
   <div style="padding:var(--s4)"><button class="btn" data-act="add" data-k="${esc(item.key)}">+ הוספת הוצאה</button></div>
   ${nav()}`;
@@ -546,6 +547,12 @@ function settings() {
   </section>
 
   ${live ? `<section class="sc2">
+    <div class="sh2">${icon('user-3')}<b>השם שלי</b></div>
+    <p class="sp">אם כמה אנשים מוסיפים הוצאות באותו גיליון (למשל בני זוג), ליד כל הוצאה יופיע מי הוסיף אותה.</p>
+    <input id="whoName" class="inp" type="text" maxlength="24" placeholder="למשל: מאיה" value="${esc(S.who)}" autocomplete="off">
+  </section>
+
+  <section class="sc2">
     <div class="sh2">${icon('lock')}<b>נעילה</b></div>
     <p class="sp">יציאה מהתקציב מסתירה את הנתונים מהמסך, והגיליון נשאר מחובר. הכניסה מחדש ${PIN.get() ? 'דורשת קוד.' : 'היא עם גוגל. מומלץ להגדיר קוד, כי בלעדיו מי שמחזיק במכשיר המחובר לגוגל יכול להיכנס.'}</p>
     <div class="brow"><button class="btn sm" data-act="lock">יציאה מהתקציב</button><button class="btn sm o" data-act="pinSetup">${PIN.get() ? 'שינוי קוד' : 'הגדרת קוד'}</button>${PIN.get() ? '<button class="btn sm danger" data-act="pinRemove">הסרת קוד</button>' : ''}</div>
@@ -569,7 +576,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'3.8 · 8.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'3.9 · 9.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -737,7 +744,7 @@ async function save() {
   const sh = S.sheet, amt = parseFloat(sh.amount);
   if (!sh.key) { toast('בחרי קטגוריה'); return; }
   if (!(amt > 0)) { toast('הקלידי סכום'); return; }
-  const e = { id: sh.id || uid(), dt: sh.dt || nowLocal(), key: sh.key, amount: Math.round(amt * 100) / 100, tags: sh.tags, note: sh.note || '' };
+  const e = { id: sh.id || uid(), dt: sh.dt || nowLocal(), key: sh.key, amount: Math.round(amt * 100) / 100, tags: sh.tags, note: sh.note || '', by: sh.mode === 'edit' ? (sh.by || '') : (S.who || '') };
   const known = new Set(S.tags[sh.key] || []); sh.tags.forEach(t => known.add(t)); S.tags[sh.key] = [...known]; LS.set('tags', S.tags); touchPrefs();
   const mode = sh.mode; closeSheet();
   await doOp(mode === 'edit' ? { op: 'upd', e } : { op: 'add', e });
@@ -838,7 +845,7 @@ async function act(a, t) {
     case 'tagToggle': { const s = S.sheet, i = s.tags.indexOf(v); i < 0 ? s.tags.push(v) : s.tags.splice(i, 1); renderSheet(); break; }
     case 'tagNew': { const n = (prompt('שם התגית (למשל: רמי לוי)') || '').trim(); if (n) { const s = S.sheet; if (!s.tags.includes(n)) s.tags.push(n); S.tags[s.key] = [...new Set([...(S.tags[s.key] || []), n])]; LS.set('tags', S.tags); touchPrefs(); renderSheet(); } break; }
     case 'save': save(); break;
-    case 'edit': { const e = S.entries.find(x => x.id === id); if (e) openSheet({ mode: 'edit', key: e.key, id: e.id, amount: String(e.amount), dt: e.dt, tags: [...(e.tags || [])], note: e.note || '' }); break; }
+    case 'edit': { const e = S.entries.find(x => x.id === id); if (e) openSheet({ mode: 'edit', by: e.by || '', key: e.key, id: e.id, amount: String(e.amount), dt: e.dt, tags: [...(e.tags || [])], note: e.note || '' }); break; }
     case 'del': if (confirm('למחוק את ההוצאה?')) doOp({ op: 'del', id }); break;
     case 'retry': S.pending.length ? flush() : load(S.month); break;
     case 'signin': try { await Auth.signIn(); S.needAuth = false; await load(S.month); flush(); } catch (e) { toast('ההתחברות לא הושלמה'); } break;
@@ -857,7 +864,7 @@ async function act(a, t) {
   }
 }
 document.addEventListener('click', ev => { const t = ev.target.closest('[data-act]'); if (!t) return; ev.preventDefault(); act(t.dataset.act, t); });
-document.addEventListener('input', ev => { const clr = ev.target.parentElement && ev.target.parentElement.querySelector('.clr'); if (clr) clr.hidden = !ev.target.value; if (ev.target.id === 'hq') { S.q = ev.target.value; renderCats(); return; } if (ev.target.id === 'eq') { S.eq = ev.target.value; const r = $('#eomrows'); if (r) r.innerHTML = eomRows(); return; } if (ev.target.id === 'catq') { const l = $('#catl'); if (l) l.innerHTML = catList(ev.target.value); return; } if (!S.sheet) return; if (ev.target.id === 'dt') S.sheet.dt = ev.target.value; else if (ev.target.id === 'note') S.sheet.note = ev.target.value; });
+document.addEventListener('input', ev => { const clr = ev.target.parentElement && ev.target.parentElement.querySelector('.clr'); if (clr) clr.hidden = !ev.target.value; if (ev.target.id === 'hq') { S.q = ev.target.value; renderCats(); return; } if (ev.target.id === 'whoName') { S.who = ev.target.value.trim().slice(0, 24); LS.set('who', S.who); return; } if (ev.target.id === 'eq') { S.eq = ev.target.value; const r = $('#eomrows'); if (r) r.innerHTML = eomRows(); return; } if (ev.target.id === 'catq') { const l = $('#catl'); if (l) l.innerHTML = catList(ev.target.value); return; } if (!S.sheet) return; if (ev.target.id === 'dt') S.sheet.dt = ev.target.value; else if (ev.target.id === 'note') S.sheet.note = ev.target.value; });
 document.addEventListener('keydown', ev => { if (ev.target.id === 'catq' && ev.key === 'Enter') { ev.preventDefault(); const b = $('#catl button'); if (b) b.click(); } });
 document.addEventListener('change', ev => { if (ev.target.id === 'selKey' && S.sheet) { S.sheet.key = ev.target.value || null; S.sheet.tags = []; renderSheet(); } });
 /* חידוש התחברות בלחיצה הראשונה: כשההרשאה פגה, כל נגיעה באפליקציה מחדשת אותה (פעולה של משתמשת, כדי שהדפדפן לא יחסום) */
