@@ -11,10 +11,11 @@
 <link rel="icon" href="icon.svg">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>מעקב הוצאות עם מאיה</title>
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" integrity="sha384-6FSSi597BTd6QcnsBNoLclRKxTOyyYqkaucRjFgCNr8wHVCp0COLClSPY4Vy/bjh" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" media="print" onload="this.media='all'" integrity="sha384-6FSSi597BTd6QcnsBNoLclRKxTOyyYqkaucRjFgCNr8wHVCp0COLClSPY4Vy/bjh" crossorigin="anonymous">
 <link href="app.css" rel="stylesheet">
 <style>
+html,body{background:#FAF8F4;margin:0}
 #splash{position:fixed;inset:0;z-index:100;background:#FAF8F4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;font-family:Heebo,-apple-system,sans-serif;transition:opacity .35s ease}
 #splash.out{opacity:0;pointer-events:none}
 #splash .sp-coin{width:74px;height:74px;border-radius:50%;background:#FFE49A;color:#14161B;font:700 38px/74px Arial,sans-serif;text-align:center;animation:spBob 1.6s ease-in-out infinite}

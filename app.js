@@ -393,7 +393,7 @@ function card(item, isVar) {
   return `<div class="sc ${v.st === 'over' ? 'ov' : ''}" data-act="open" data-k="${esc(item.key)}">
     <div class="tp"><div class="nm">${esc(item.name)}</div><button class="pls" data-act="add" data-k="${esc(item.key)}" aria-label="הוספת הוצאה ל${esc(item.name)}">+</button></div>
     <div class="am"><b class="num">${fmt(v.spent)}</b><span>מתוך <span class="num">${fmt(v.budget)}</span></span></div>
-    ${v.p > 0 ? `<div class="ln"><i style="width:${Math.min(100, v.p * 100)}%"></i></div>` : ""}${alert}</div>`;
+    ${v.p > 0 ? `<div class="ln"><i style="width:${Math.min(100, v.p * 100)}%"></i></div>` : ""}${isVar && S.period === 'week' && S.month === S.current.month ? `<div class="mo">החודש: <span class="num">${fmt(item.spent)}</span> מתוך <span class="num">${fmt(Math.max(0, item.budget + (item.carry || 0)))}</span></div>` : ''}${alert}</div>`;
 }
 
 function nav() {
@@ -587,7 +587,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'4.9 · 9.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'5.1 · 12.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -739,7 +739,7 @@ function renderSheet() {
     <div class="field">${icon('calendar')}<input id="dt" type="datetime-local" value="${esc(sh.dt)}"></div>
     <div class="field">${icon('chat-3')}<input id="note" type="text" maxlength="200" placeholder="הערה (לא חובה)" value="${esc(sh.note || '')}"></div>
     ${sh.key ? `<div class="lab">תגיות</div><div class="tgs">${tags.map(t => `<button data-act="tagToggle" data-v="${esc(t)}" class="${sh.tags.includes(t) ? 'on' : ''}">${esc(t)}</button>`).join('')}<button class="add" data-act="tagNew">+ תגית חדשה</button></div>` : ''}
-    <div class="pad">${['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].map(k => `<button data-act="key" data-v="${k}">${k}</button>`).join('')}</div>
+    <div class="pad">${['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].map(k => `<button data-act="key" data-v="${k}"${k === '.' || k === '⌫' ? ' class="bare"' : ''}${k === '⌫' ? ' aria-label="מחיקה"' : ''}>${k === '⌫' ? icon('delete-back-2') : k}</button>`).join('')}</div>
     <button class="btn" data-act="save">${sh.mode === 'edit' ? 'שמירת שינויים' : 'הוספת הוצאה'}</button></div>`;
 }
 
