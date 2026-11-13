@@ -276,7 +276,7 @@ function sortedGroups(groups, tab) {
 }
 function view(item, isVar) {
   const wk = isVar && S.period === 'week' && S.month === S.current.month;
-  const weekly = item.weekly || Math.round(item.budget / 4.3);
+  const weekly = Math.max(0, Math.round((item.budget + (item.carry || 0)) / 4.3));   // השבועי כולל את הגלגול מהחודש הקודם
   const carry = wk ? 0 : (item.carry || 0), planned = wk ? weekly : item.budget;
   const eff = planned + carry, budget = Math.max(0, eff), spent = wk ? (item.weeks[S.current.week] || 0) : item.spent;
   const p = budget > 0 ? spent / budget : (spent > 0 ? 2 : 0);
@@ -393,7 +393,7 @@ function card(item, isVar) {
   return `<div class="sc ${v.st === 'over' ? 'ov' : ''}" data-act="open" data-k="${esc(item.key)}">
     <div class="tp"><div class="nm">${esc(item.name)}</div><button class="pls" data-act="add" data-k="${esc(item.key)}" aria-label="הוספת הוצאה ל${esc(item.name)}">+</button></div>
     <div class="am"><b class="num">${fmt(v.spent)}</b><span>מתוך <span class="num">${fmt(v.budget)}</span></span></div>
-    ${v.p > 0 ? `<div class="ln"><i style="width:${Math.min(100, v.p * 100)}%"></i></div>` : ""}${isVar && S.period === 'week' && S.month === S.current.month ? `<div class="mo">החודש: <span class="num">${fmt(item.spent)}</span> מתוך <span class="num">${fmt(Math.max(0, item.budget + (item.carry || 0)))}</span></div>` : ''}${alert}</div>`;
+    ${v.p > 0 ? `<div class="ln"><i style="width:${Math.min(100, v.p * 100)}%"></i></div>` : ""}${isVar && S.period === 'week' && S.month === S.current.month ? `<div class="mo">החודש: <span class="num">${fmt(item.spent)}</span> מתוך <span class="num">${fmt(Math.max(0, item.budget + (item.carry || 0)))}</span>${item.carry ? ` · כולל גלגול ${item.carry > 0 ? '+' : '−'}<span class="num">${fmt(Math.abs(item.carry)).replace('−', '')}</span>` : ''}</div>` : ''}${alert}</div>`;
 }
 
 function nav() {
@@ -587,7 +587,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'5.1 · 12.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'5.2 · 13.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
