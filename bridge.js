@@ -607,6 +607,11 @@
     }
   }
 
-  const Bridge = { configure: configure, call: call, createFile: createFile, _internals: { model: () => model(), calls: () => apiCalls, colIndex: colIndex, colLetter: colLetter, SHEETS: SHEETS } };
+  /* הגיליונות שהאפליקציה יצרה או שנבחרו בה (הרשאת drive.file מחזירה רק אותם), לחיפוש אוטומטי בכניסה ממכשיר חדש */
+  async function listFiles() {
+    const j = await api('https://www.googleapis.com/drive/v3/files', { params: { q: "mimeType='application/vnd.google-apps.spreadsheet' and trashed=false", fields: 'files(id,name,modifiedTime)', orderBy: 'modifiedTime desc', pageSize: 20 } });
+    return j.files || [];
+  }
+  const Bridge = { configure: configure, call: call, createFile: createFile, listFiles: listFiles, _internals: { model: () => model(), calls: () => apiCalls, colIndex: colIndex, colLetter: colLetter, SHEETS: SHEETS } };
   if (typeof module !== 'undefined' && module.exports) module.exports = Bridge; else root.Bridge = Bridge;
 })(typeof window !== 'undefined' ? window : globalThis);

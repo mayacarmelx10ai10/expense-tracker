@@ -573,7 +573,7 @@ function settings() {
     <div class="sh2">${icon('links')}<b>חיבור לגיליון</b></div>
     <div class="status"><span class="dot ${live ? (S.error ? 'bad' : 'ok') : ''}"></span><b>${live ? 'מחובר' : 'לא מחובר'}</b></div>
     ${live ? `<p class="sp">${esc(S.cfg.sheetName || S.cfg.sheetId)}<br>סנכרון אחרון: ${esc(when)} · החודש מתחיל ביום ${S.startDay}</p>` : ''}
-    ${!Auth.ready() ? '<p class="sp">חסרה הגדרת Google באפליקציה (קובץ config.js).</p>' : `<div class="brow">${live && !Auth.valid() ? '<button class="btn sm" data-act="signin">התחברות מחדש</button>' : ''}<button class="btn sm o" data-act="pick">${live ? 'החלפת גיליון' : 'התחברות עם גוגל'}</button><button class="btn sm o" data-act="pasteLink">הדבקת קישור</button>${live ? '<button class="btn sm danger" data-act="disconnect">ניתוק</button>' : ''}</div>`}
+    ${!Auth.ready() ? '<p class="sp">חסרה הגדרת Google באפליקציה (קובץ config.js).</p>' : `<div class="brow">${live && !Auth.valid() ? '<button class="btn sm" data-act="signin">התחברות מחדש</button>' : ''}<button class="btn sm o" data-act="start">${live ? 'החלפת גיליון' : 'התחברות עם גוגל'}</button><button class="btn sm o" data-act="pasteLink">הדבקת קישור</button>${live ? '<button class="btn sm danger" data-act="disconnect">ניתוק</button>' : ''}</div>`}
   </section>
 
   ${live ? `<section class="sc2">
@@ -608,7 +608,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'6.1 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'6.2 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -732,6 +732,28 @@ function fileCards() {
   </section>`;
 }
 
+/* ---------- כניסה: מוצאים את הגיליון של המשתמשת, או יוצרים חדש ---------- */
+async function startFlow() {
+  try { await Auth.signIn(); } catch (e) { toast('ההתחברות לא הושלמה'); return; }
+  let files = [];
+  try { Bridge.configure({ sheetId: '', getToken: () => Auth.token() }); files = await Bridge.listFiles(); } catch (e) { files = []; }
+  S.error = null;
+  if (!files.length) { S.wiz = { startYm: new Date().getFullYear() * 100 + new Date().getMonth() + 1, months: 12, busy: false }; render(); return; }
+  if (files.length === 1) { await useFile(files[0]); return; }
+  S.files = files; render();
+}
+async function useFile(f) {
+  S.files = null; S.cfg = { sheetId: f.id, sheetName: f.name }; LS.set('cfg', S.cfg); setupBridge();
+  S.needAuth = false; S.budgetCfg = null; S.error = null; await connectFlow(); flush();
+}
+function filesScreen() {
+  return `<div class="top"><span class="app">מעקב הוצאות עם מאיה</span></div>
+  <div class="wel wiz"><h2>איזה גיליון להפעיל?</h2><p>מצאנו כמה גיליונות שלך. בחרי את גיליון התקציב.</p>
+    ${S.files.map(f => `<button class="btn o" data-act="useFile" data-k="${esc(f.id)}" style="margin-bottom:var(--s3)">${esc(f.name)}</button>`).join('')}
+    <button class="btn" data-act="wizStart">יצירת גיליון חדש</button>
+    <button class="lnk" data-act="filesBack" style="margin-top:var(--s3)">חזרה</button></div>`;
+}
+
 const SHEETS_ICON = '<svg viewBox="0 0 40 52" width="56" height="72" aria-hidden="true"><path d="M4 0h20l16 16v32a4 4 0 0 1-4 4H4a4 4 0 0 1-4-4V4a4 4 0 0 1 4-4z" fill="#23A566"/><path d="M24 0l16 16H28a4 4 0 0 1-4-4z" fill="#188038"/><rect x="9" y="25" width="22" height="16" rx="1.5" fill="#fff"/><path d="M9 30.5h22M9 35.5h22M17.5 25v16" stroke="#23A566" stroke-width="1.6" fill="none"/></svg>';
 function onboarding(locked) {
   const ready = Auth.ready();
@@ -756,7 +778,7 @@ function onboarding(locked) {
       <li>${icon('check')}<span>השינויים מתעדכנים בכל המכשירים</span></li>
     </ul>
     <div class="cta">
-    ${locked ? `<div class="assure">${icon('lock')}האפליקציה נעולה והנתונים מוסתרים</div><button class="btn big" data-act="unlockStart">כניסה</button>` : ready ? `<div class="assure">${icon('lock')}האפליקציה רואה רק את הגיליון שתבחרי</div><button class="btn big" data-act="wizStart">יצירת גיליון תקציב חדש</button><button class="btn o" data-act="pick" style="margin-top:var(--s3)">יש לי גיליון, התחברות עם גוגל</button><button class="lnk" data-act="pasteLink" style="margin-top:var(--s3)">או הדבקת קישור לגיליון</button>${false && Auth.conf().templateId ? `<a class="btn o tplbtn" href="https://docs.google.com/spreadsheets/d/${esc(Auth.conf().templateId)}/copy" target="_blank" rel="noopener">${icon('file-copy')}<span><b>אין לי גיליון עדיין</b><small>יצירת עותק מהתבנית</small></span></a>` : ''}` : '<div class="banner err" style="margin:0;text-align:right"><i class="ri-error-warning-fill"></i><span>האפליקציה עדיין לא הוגדרה מול Google, ולכן אי אפשר להתחבר. למנהלת: ממלאים את <b>config.js</b> (README, "הגדרת Google").</span></div>'}
+    ${locked ? `<div class="assure">${icon('lock')}האפליקציה נעולה והנתונים מוסתרים</div><button class="btn big" data-act="unlockStart">כניסה</button>` : ready ? `<div class="assure">${icon('lock')}האפליקציה רואה רק את הגיליון שתבחרי</div><button class="btn big" data-act="start">כניסה עם גוגל</button><div class="hint" style="text-align:center;margin-top:var(--s3)">בפעם הראשונה האפליקציה תיצור לך גיליון תקציב. אם כבר יש לך, היא תמצא אותו.</div><button class="lnk" data-act="pick" style="margin-top:var(--s3)">בחירת גיליון קיים ידנית</button>${false && Auth.conf().templateId ? `<a class="btn o tplbtn" href="https://docs.google.com/spreadsheets/d/${esc(Auth.conf().templateId)}/copy" target="_blank" rel="noopener">${icon('file-copy')}<span><b>אין לי גיליון עדיין</b><small>יצירת עותק מהתבנית</small></span></a>` : ''}` : '<div class="banner err" style="margin:0;text-align:right"><i class="ri-error-warning-fill"></i><span>האפליקציה עדיין לא הוגדרה מול Google, ולכן אי אפשר להתחבר. למנהלת: ממלאים את <b>config.js</b> (README, "הגדרת Google").</span></div>'}
     ${S.error ? `<div class="hint" style="margin-top:var(--s3);color:var(--pt);text-align:center">${esc(S.error)}</div>` : ''}
     </div>
   </div>`;
@@ -766,6 +788,7 @@ function render() {
   const a = $('#app');
   if (S.locked && isLive()) { a.innerHTML = lockScreen(); return; }
   if (S.wiz) { a.innerHTML = wizard(); return; }
+  if (S.files) { a.innerHTML = filesScreen(); return; }
   if (!isLive() && !DEV) { a.innerHTML = onboarding(); return; }
   if (S.screen === 'pinsetup') { a.innerHTML = pinSetupScreen(); return; }
   a.innerHTML = S.screen === 'detail' ? detail() : S.screen === 'settings' ? settings() : S.screen === 'eom' ? eomScreen() : S.screen === 'summary' ? summaryScreen() : home();
@@ -898,7 +921,10 @@ async function act(a, t) {
       S.cfg = { sheetId: m[1], sheetName: '' }; LS.set('cfg', S.cfg); setupBridge(); S.needAuth = false; S.budgetCfg = null; S.error = null;
       await connectFlow(); flush(); break;
     }
-    case 'wizStart': S.wiz = { startYm: new Date().getFullYear() * 100 + new Date().getMonth() + 1, months: 12, busy: false }; S.error = null; window.scrollTo(0, 0); render(); break;
+    case 'start': startFlow(); break;
+    case 'useFile': { const f = (S.files || []).find(x => x.id === k); if (f) useFile(f); break; }
+    case 'filesBack': S.files = null; render(); break;
+    case 'wizStart': S.files = null; S.wiz = { startYm: new Date().getFullYear() * 100 + new Date().getMonth() + 1, months: 12, busy: false }; S.error = null; window.scrollTo(0, 0); render(); break;
     case 'wizCancel': S.wiz = null; S.error = null; render(); break;
     case 'wizCreate': wizCreate(); break;
     case 'repair': {
@@ -985,7 +1011,7 @@ document.addEventListener('change', ev => { if (ev.target.id === 'selKey' && S.s
 let renewing = false;
 document.addEventListener('pointerdown', async ev => {
   if (S.locked || renewing || !isLive() || !Auth.ready() || Auth.valid()) return;
-  if (ev.target.closest('[data-act="signin"],[data-act="pick"],[data-act="disconnect"]')) return;
+  if (ev.target.closest('[data-act="signin"],[data-act="pick"],[data-act="start"],[data-act="disconnect"]')) return;
   renewing = true;
   try { await Auth.signIn(); S.needAuth = false; await load(S.month, true); flush(); }
   catch { /* ההודעה האדומה נשארת, והכפתור בה מחבר */ }
