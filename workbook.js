@@ -196,7 +196,7 @@
   const width = (sheetId, c1, c2, px) => ({ updateDimensionProperties: { range: { sheetId: sheetId, dimension: 'COLUMNS', startIndex: c1, endIndex: c2 }, properties: { pixelSize: px }, fields: 'pixelSize' } });
   const protect = (sheetId, desc, extra) => ({ addProtectedRange: { protectedRange: Object.assign({ range: { sheetId: sheetId }, description: desc, warningOnly: true }, extra || {}) } });
 
-  const DARK = { style: 'SOLID_MEDIUM', color: { red: 0.1, green: 0.1, blue: 0.1 } };
+  const DARK = { style: 'SOLID_MEDIUM', color: { red: 0.25, green: 0.25, blue: 0.25 } };
   function viewFormat(sheetId, v) {
     const rng = (r1, r2, c1, c2) => ({ sheetId: sheetId, startRowIndex: r1, endRowIndex: r2, startColumnIndex: c1, endColumnIndex: c2 });
     const reqs = [headerFmt(sheetId, 3, 4, 0, v.width), width(sheetId, 0, 1, 130), width(sheetId, 1, 2, 190), width(sheetId, 2, v.pre, 90), width(sheetId, v.pre, v.width, 74),
@@ -216,9 +216,9 @@
     const S = ID.ITEMS, out = [], N = '"₪"\\ #,##0;[Red]"₪"\\ \\-#,##0', n = meta.length + 2;
     const rg = (r1, r2, c1, c2) => ({ sheetId: S, startRowIndex: r1, endRowIndex: r2, startColumnIndex: c1, endColumnIndex: c2 });
     const fmt = (r1, r2, c1, c2, f, fields) => out.push({ repeatCell: { range: rg(r1, r2, c1, c2), cell: { userEnteredFormat: f }, fields: 'userEnteredFormat(' + fields + ')' } });
-    const W = { foregroundColor: rgb('FFFFFF') }, thin = { style: 'SOLID', color: rgb('B7B7B7') };
+    const W = { foregroundColor: rgb('FFFFFF') }, thin = { style: 'SOLID', color: rgb('D0D0D0') };
     // בסיס: Arial 14 לכל הלשונית, יישור מרכז-אנכי
-    fmt(0, n + 100, 0, 8, { textFormat: { fontFamily: 'Arial', fontSize: 14 }, verticalAlignment: 'MIDDLE' }, 'textFormat,verticalAlignment');
+    fmt(0, n + 100, 0, 8, { textFormat: { fontFamily: 'Arial', fontSize: 12 }, verticalAlignment: 'MIDDLE' }, 'textFormat,verticalAlignment');
     fmt(0, n + 100, 4, 6, { numberFormat: { type: 'NUMBER', pattern: N }, horizontalAlignment: 'CENTER' }, 'numberFormat,horizontalAlignment');
     fmt(0, n + 100, 3, 4, { horizontalAlignment: 'CENTER' }, 'horizontalAlignment');
     fmt(0, n + 100, 0, 2, { horizontalAlignment: 'RIGHT' }, 'horizontalAlignment');
@@ -226,21 +226,21 @@
       const r = m.row - 1, k = m.kind;
       const box = () => out.push({ updateBorders: { range: rg(r, r + 1, 0, 6), top: thin, bottom: thin, left: thin, right: thin, innerVertical: thin } });
       const merge = () => out.push({ mergeCells: { range: rg(r, r + 1, 0, 2), mergeType: 'MERGE_ALL' } });
-      const band = (hex, bold) => { fmt(r, r + 1, 0, 6, { backgroundColor: rgb(hex), textFormat: Object.assign({ fontFamily: 'Arial', fontSize: 14, bold: true }, bold ? W : {}) }, 'backgroundColor,textFormat'); };
+      const band = (hex, bold) => { fmt(r, r + 1, 0, 6, { backgroundColor: rgb(hex), textFormat: Object.assign({ fontFamily: 'Arial', fontSize: 12, bold: true }, bold ? W : {}) }, 'backgroundColor,textFormat'); };
       if (k === 'top') {
-        fmt(r, r + 1, 0, 6, { backgroundColor: rgb('FFFFFF'), textFormat: { fontFamily: 'Arial', fontSize: 20, bold: true } }, 'backgroundColor,textFormat'); box(); merge();
-        fmt(r, r + 1, 7, 8, { backgroundColor: rgb('FFFF00'), textFormat: { fontFamily: 'Calibri', fontSize: 20, bold: true } }, 'backgroundColor,textFormat');
-        out.push({ updateDimensionProperties: { range: { sheetId: S, dimension: 'ROWS', startIndex: r, endIndex: r + 1 }, properties: { pixelSize: 46 }, fields: 'pixelSize' } });
+        fmt(r, r + 1, 0, 6, { backgroundColor: rgb('FFFFFF'), textFormat: { fontFamily: 'Arial', fontSize: 16, bold: true } }, 'backgroundColor,textFormat'); box(); merge();
+        fmt(r, r + 1, 7, 8, { backgroundColor: rgb('FFFF00'), textFormat: { fontFamily: 'Calibri', fontSize: 16, bold: true } }, 'backgroundColor,textFormat');
+        out.push({ updateDimensionProperties: { range: { sheetId: S, dimension: 'ROWS', startIndex: r, endIndex: r + 1 }, properties: { pixelSize: 38 }, fields: 'pixelSize' } });
       } else if (k === 'fillhint') {
-        fmt(r, r + 1, 4, 5, { backgroundColor: rgb('FFFF00'), textFormat: { fontFamily: 'Arial', fontSize: 16, bold: true }, horizontalAlignment: 'CENTER' }, 'backgroundColor,textFormat,horizontalAlignment');
+        fmt(r, r + 1, 4, 5, { backgroundColor: rgb('FFFF00'), textFormat: { fontFamily: 'Arial', fontSize: 13, bold: true }, horizontalAlignment: 'CENTER' }, 'backgroundColor,textFormat,horizontalAlignment');
         out.push({ updateBorders: { range: rg(r, r + 1, 4, 5), bottom: thin } });
       } else if (k === 'sechdr') { band('1F3864', true); box(); merge(); fmt(r, r + 1, 3, 6, { horizontalAlignment: 'CENTER', wrapStrategy: 'WRAP' }, 'horizontalAlignment,wrapStrategy'); }
       else if (k === 'total') { band('00B0F0', true); box(); merge(); }
       else if (k === 'inctotal') { band('1B6B35', true); box(); merge(); }
       else if (k === 'exptotal') { band('D32F2F', true); box(); merge(); }
       else if (k === 'bothdr' || k === 'botbal') { band('7F7F7F', true); box(); merge(); }
-      else if (k === 'botrow') { fmt(r, r + 1, 0, 6, { textFormat: { fontFamily: 'Arial', fontSize: 14, bold: true } }, 'textFormat'); box(); merge(); }
-      else if (k === 'datehdr') { fmt(r, r + 1, 3, 4, { textFormat: { fontFamily: 'Arial', fontSize: 14, bold: true } }, 'textFormat'); }
+      else if (k === 'botrow') { fmt(r, r + 1, 0, 6, { textFormat: { fontFamily: 'Arial', fontSize: 12, bold: true } }, 'textFormat'); box(); merge(); }
+      else if (k === 'datehdr') { fmt(r, r + 1, 3, 4, { textFormat: { fontFamily: 'Arial', fontSize: 12, bold: true } }, 'textFormat'); }
       else if (k === 'income') { box(); merge(); fmt(r, r + 1, 4, 5, { backgroundColor: rgb('FFFFCC') }, 'backgroundColor'); }
       else if (k === 'item') {
         box(); fmt(r, r + 1, 4, 5, { backgroundColor: rgb('FFFFCC') }, 'backgroundColor');
@@ -259,7 +259,7 @@
   /* הגנות ועיצוב כללי של הלשוניות. marks = שורות הסכומים בלשונית התקציב (נחשבות מהגיליון בתיקון). layout 'flat' = הפריסה הראשונה (בלי עיצוב מיוחד). */
   function staticFormat(items, layout, marks) {
     const itemsPart = layout === 'flat' ? [] : [
-      width(ID.ITEMS, 0, 1, 130), width(ID.ITEMS, 1, 2, 250), width(ID.ITEMS, 2, 3, 30), width(ID.ITEMS, 3, 4, 110), width(ID.ITEMS, 4, 5, 185), width(ID.ITEMS, 5, 6, 235), width(ID.ITEMS, 6, 7, 40), width(ID.ITEMS, 7, 8, 320),
+      width(ID.ITEMS, 0, 1, 115), width(ID.ITEMS, 1, 2, 220), width(ID.ITEMS, 2, 3, 24), width(ID.ITEMS, 3, 4, 100), width(ID.ITEMS, 4, 5, 140), width(ID.ITEMS, 5, 6, 160), width(ID.ITEMS, 6, 7, 40), width(ID.ITEMS, 7, 8, 260),
       { addDimensionGroup: { range: { sheetId: ID.ITEMS, dimension: 'COLUMNS', startIndex: 8, endIndex: 9 } } },
       { updateDimensionGroup: { dimensionGroup: { range: { sheetId: ID.ITEMS, dimension: 'COLUMNS', startIndex: 8, endIndex: 9 }, depth: 1, collapsed: true }, fields: 'collapsed' } },
       { updateSheetProperties: { properties: { sheetId: ID.ITEMS, gridProperties: { frozenRowCount: 5 } }, fields: 'gridProperties.frozenRowCount' } },
