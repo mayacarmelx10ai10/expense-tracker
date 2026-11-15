@@ -608,7 +608,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'7.3 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'7.4 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -706,7 +706,7 @@ async function wizCreate() {
   w.busy = true; S.error = null; render();
   try {
     Bridge.configure({ sheetId: '', getToken: () => Auth.token() });
-    const r = await Bridge.createFile({ title: 'מעקב הוצאות', startYm: w.startYm, months: w.months });
+    const r = await Bridge.createFile({ title: 'שיקוף תקציב - הוצאות עם מאיה', startYm: w.startYm, months: w.months });
     S.cfg = { sheetId: r.id, sheetName: r.name }; LS.set('cfg', S.cfg); setupBridge();
     S.wiz = null; S.needAuth = false; S.budgetCfg = null; S.error = null; S.newFileUrl = r.url;
     await connectFlow(); flush();

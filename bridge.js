@@ -165,7 +165,7 @@
 
   /* ---------- הפורמט החדש: האפליקציה קוראת רק לשוניות קלט (התקציב, היומן, ההגדרות) ולא תאי נוסחה ---------- */
   async function model2() {
-    const v = await batchVals([q(SHEETS.ITEMS) + '!A1:H500', q(SHEETS.SETTINGS) + '!A2:C60']);
+    const v = await batchVals([q(SHEETS.ITEMS) + '!A1:I500', q(SHEETS.SETTINGS) + '!A2:C60']);
     const settingsRows = v[1], setting = name => { const r = settingsRows.find(x => trim(x[0]) === name); return r ? r[1] : undefined; };
     const startYm = Number(setting('startYm')) || (cfg.now().getFullYear() * 100 + cfg.now().getMonth() + 1);
     const months = Math.max(1, Math.min(12, Number(setting('months')) || 12));
@@ -540,19 +540,19 @@
     const startYm = Number(o.startYm) || (now.getFullYear() * 100 + now.getMonth() + 1);
     if (!(startYm % 100 >= 1 && startYm % 100 <= 12)) throw new Error('חודש התחלה לא תקין');
     const p = W.plan({ items: o.items, startYm: startYm, months: o.months, startDay: o.startDay, opening: o.opening, prefsJson: o.prefsJson });
-    const j = await api('https://sheets.googleapis.com/v4/spreadsheets', { method: 'POST', body: W.createBody(o.title || 'מעקב הוצאות', p) });
+    const j = await api('https://sheets.googleapis.com/v4/spreadsheets', { method: 'POST', body: W.createBody(o.title || 'שיקוף תקציב - הוצאות עם מאיה', p) });
     const id = j.spreadsheetId, base = sheetUrl(id);
     await api(base + '/values:batchUpdate', { method: 'POST', body: { valueInputOption: 'USER_ENTERED', data: p.formulas } });
     await api(base + '/values:batchUpdate', { method: 'POST', body: { valueInputOption: 'RAW', data: p.raw } });
     await api(base + ':batchUpdate', { method: 'POST', body: { requests: W.formatRequests(p) } });
-    return { ok: true, id: id, name: (j.properties && j.properties.title) || o.title || 'מעקב הוצאות', url: j.spreadsheetUrl || ('https://docs.google.com/spreadsheets/d/' + id + '/edit'), months: p.months, startYm: startYm };
+    return { ok: true, id: id, name: (j.properties && j.properties.title) || o.title || 'שיקוף תקציב - הוצאות עם מאיה', url: j.spreadsheetUrl || ('https://docs.google.com/spreadsheets/d/' + id + '/edit'), months: p.months, startYm: startYm };
   }
   const swapIds = (x, map) => { if (Array.isArray(x)) return x.map(v => swapIds(v, map)); if (x && typeof x === 'object') { const o = {}; Object.keys(x).forEach(k => { o[k] = (k === 'sheetId' && map[x[k]] != null) ? map[x[k]] : swapIds(x[k], map); }); return o; } return x; };
   /* תיקון: כותב מחדש את נוסחאות הצפייה, העיצוב וההגנות. לא נוגע בתקציב, ביומן או בהגדרות. */
   async function repair() {
     cache.model = null;
     const mod = await model(); if (!mod.v2) throw new Error('התיקון מיועד לקובץ בפורמט החדש');
-    const W = wb(), rows = await getVals(q(SHEETS.ITEMS) + '!A1:H500'), parsed = W.parseItems(rows);
+    const W = wb(), rows = await getVals(q(SHEETS.ITEMS) + '!A1:I500'), parsed = W.parseItems(rows);
     const items = parsed.items;
     const p = W.repairPlan(items, mod.startYm, mod.months, parsed.layout, parsed.marks);
     let m = await meta(true);
@@ -583,7 +583,7 @@
     const items = [];
     [['קבועה', mod.fixed.list, 'fixed:'], ['שוטפת', mod.variable.list, 'var:']].forEach(([type, list, pref]) => list.forEach(it => { if (!it.gone) items.push({ type: type, group: it.group, name: it.name, budget: it.budget, key: pref + it.n }); }));
     const pr = o.prefs ? Object.assign({}, o.prefs, { ts: cfg.now().getTime(), decisions: {}, deposits: {} }) : null;
-    const f = await createFile({ title: o.title || 'מעקב הוצאות ' + (startYm % 100 >= 1 ? Math.floor(startYm / 100) : ''), items: items, startYm: startYm, months: 12, startDay: mod.startDay, opening: opening, prefsJson: pr ? JSON.stringify(pr) : '' });
+    const f = await createFile({ title: o.title || 'שיקוף תקציב - הוצאות עם מאיה ' + (startYm % 100 >= 1 ? Math.floor(startYm / 100) : ''), items: items, startYm: startYm, months: 12, startDay: mod.startDay, opening: opening, prefsJson: pr ? JSON.stringify(pr) : '' });
     f.opening = opening;
     return f;
   }

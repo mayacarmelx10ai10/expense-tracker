@@ -11,8 +11,8 @@
 (function (root) {
   'use strict';
 
-  const T = { ITEMS: 'התקציב', VAR: 'הוצאות משתנות', FIXED: 'הוצאות קבועות', LOG: 'יומן הוצאות', SNAP: 'תקציב לפי חודש', SET: 'הגדרות אפליקציה' };
-  const ID = { ITEMS: 1, VAR: 2, FIXED: 3, LOG: 4, SNAP: 5, SET: 6 };
+  const T = { ITEMS: 'התקציב', VAR: 'הוצאות משתנות', FIXED: 'הוצאות קבועות', LOG: 'יומן הוצאות', SNAP: 'תקציב לפי חודש', SET: 'הגדרות אפליקציה', SUM: 'סיכום בקרה קבועות ומשתנות', CREDIT: 'לא חובה - יתרת תשלומים באשראי', BIZ: 'תקציב לבעלי עסק' };
+  const ID = { ITEMS: 1, VAR: 2, FIXED: 3, LOG: 4, SNAP: 5, SET: 6, SUM: 7, CREDIT: 8, BIZ: 9 };
   const MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
   const LOG_HEADER = ['מזהה', 'תאריך ושעה', 'סוג', 'קבוצה', 'קטגוריה', 'סכום', 'תגיות', 'הערה', 'חודש', 'שבוע', 'יעד בבקרה', 'מפתח', 'נוסף ע"י'];
   const SNAP_HEADER = ['חודש (שנה+חודש)', 'מפתח', 'קבוצה', 'קטגוריה', 'תקציב', 'עמודה'];
@@ -146,21 +146,21 @@
     const RF = layout === 'flat' ? { g: 'B', n: 'C', b: 'D', k: 'E', grow: false } : { g: 'A', n: 'B', b: 'F', k: 'I', grow: true };
     const rows = [];   // br = השורה של הסעיף בלשונית "התקציב" (it.row אם ידועה, אחרת לפי הסדר)
     items.forEach((it, i) => { if ((it.type !== 'קבועה') === isVar) rows.push({ it: it, br: it.row || i + 2 }); });
-    const pre = isVar ? 4 : 3, per = isVar ? 6 : 2, months = monthList(startYm, count), width = pre + per * count, first = 5;
-    const grid = []; for (let r = 0; r < first + rows.length; r++) grid.push(new Array(width).fill(''));
-    grid[0][0] = 'הוצאות ' + (isVar ? 'משתנות' : 'קבועות') + ' לפי חודש. לצפייה בלבד: הכול מחושב מהלשוניות "התקציב" ו"יומן הוצאות". האפליקציה לא תלויה בלשונית הזאת.';
-    grid[1][0] = 'מזהה חודש (לא לגעת)';
-    grid[3][0] = 'קבוצה'; grid[3][1] = 'סעיף'; grid[3][2] = 'תקציב'; if (isVar) grid[3][3] = 'תקציב שבועי';
+    // כמו "בקרה קבועות" / "בקרה משתנות": שורה 1 חודשים, שורה 2 כותרות, מכאן הסעיפים. בקבועות עמודה A ריקה
+    const g = isVar ? 0 : 1, pre = 4, per = isVar ? 6 : 2, months = monthList(startYm, count), width = pre + per * count, first = 3;
+    const grid = []; for (let r = 0; r < first - 1 + rows.length; r++) grid.push(new Array(width).fill(''));
+    if (isVar) { grid[1][0] = 'הוצאות משתנות'; grid[1][2] = 'תקציב'; grid[1][3] = 'תקציב שבועי'; }
+    else { grid[0][1] = 'תקציב חדש'; grid[1][1] = 'הוצאות קבועות'; grid[1][3] = 'תקציב'; }
     const IT = q(T.ITEMS), SN = q(T.SNAP), LG = q(T.LOG);
     rows.forEach((r, i) => {
       const row = grid[first - 1 + i], R = first + i;
-      row[0] = '=' + IT + '!$' + RF.g + '$' + (RF.grow ? (r.it.grow || r.br) : r.br); row[1] = '=' + IT + '!$' + RF.n + '$' + r.br; row[2] = '=N(' + IT + '!$' + RF.b + '$' + r.br + ')';
+      row[g] = '=' + IT + '!$' + RF.g + '$' + (RF.grow ? (r.it.grow || r.br) : r.br); row[g + 1] = '=' + IT + '!$' + RF.n + '$' + r.br; row[g + 2] = '=N(' + IT + '!$' + RF.b + '$' + r.br + ')';
       if (isVar) row[3] = '=C' + R + '/4.3';
     });
     months.forEach((m, mi) => {
-      const c0 = pre + mi * per, ymc = col(c0 + 1) + '$2';
-      grid[1][c0] = m.ym; grid[2][c0] = MONTHS[m.mo - 1] + ' ' + m.yr;
-      (isVar ? ['שבוע 1', 'שבוע 2', 'שבוע 3', 'שבוע 4', 'שבוע 5', 'יתרה'] : ['בפועל', 'יתרה']).forEach((l, j) => { grid[3][c0 + j] = l; });
+      const c0 = pre + mi * per, ymc = '(YEAR(' + col(c0 + 1) + '$1)*100+MONTH(' + col(c0 + 1) + '$1))';
+      grid[0][c0] = '=DATE(' + m.yr + ',' + m.mo + ',1)';
+      (isVar ? ['שבוע 1', 'שבוע 2', 'שבוע 3', 'שבוע 4', 'שבוע 5', 'יתרה'] : ['בפועל', 'יתרה']).forEach((l, j) => { grid[1][c0 + j] = l; });
       rows.forEach((r, i) => {
         const row = grid[first - 1 + i], R = first + i, key = IT + '!$' + RF.k + '$' + r.br;
         const bud = 'IF(COUNTIFS(' + SN + '!$A:$A,' + ymc + ',' + SN + '!$B:$B,' + key + ')>0,SUMIFS(' + SN + '!$E:$E,' + SN + '!$A:$A,' + ymc + ',' + SN + '!$B:$B,' + key + '),N(' + IT + '!$' + RF.b + '$' + r.br + '))';
@@ -174,13 +174,18 @@
     });
     // שורת סיכום
     const tr = new Array(width).fill(''), last = first + rows.length - 1;
-    tr[0] = 'סה"כ';
+    tr[isVar ? 0 : 2] = isVar ? 'סה"כ הוצאות משתנות' : 'סה"כ הוצאות קבועות';
     const tot = c => rows.length ? '=SUM(' + col(c + 1) + first + ':' + col(c + 1) + last + ')' : 0;
-    tr[2] = tot(2); if (isVar) tr[3] = tot(3);
+    tr[g + 2] = tot(g + 2); if (isVar) tr[3] = tot(3);
     months.forEach((m, mi) => { const c0 = pre + mi * per; for (let j = 0; j < per; j++) tr[c0 + j] = tot(c0 + j); });
     grid.push(tr);
-    const groupStarts = []; rows.forEach((r, i) => { if (i > 0 && (r.it.grow || r.br) === r.br) groupStarts.push(first - 1 + i); });
-    return { grid: grid, per: per, pre: pre, count: count, rowCount: rows.length, width: width, first: first, groupStarts: groupStarts };
+    if (isVar) {   // "סה"כ הוצאות משתנות לחודש" כמו במקור: סכום השבועות
+      const t2 = new Array(width).fill(''); t2[0] = 'סה"כ הוצאות משתנות לחודש';
+      months.forEach((m, mi) => { const c0 = pre + mi * per; t2[c0 + 5] = '=SUM(' + col(c0 + 1) + (last + 1) + ':' + col(c0 + 5) + (last + 1) + ')'; });
+      grid.push(t2);
+    }
+    const groups = []; rows.forEach((r, i) => { if ((r.it.grow || r.br) === r.br) groups.push([first - 1 + i, 1]); else groups[groups.length - 1][1]++; });
+    return { grid: grid, per: per, pre: pre, count: count, rowCount: rows.length, width: width, first: first, isVar: isVar, g: g, groups: groups, groupStarts: groups.slice(1).map(x => x[0]) };
   }
 
   /* ---- לשוניות שהאפליקציה כותבת ---- */
@@ -199,53 +204,92 @@
   const DARK = { style: 'SOLID_MEDIUM', color: { red: 0.25, green: 0.25, blue: 0.25 } };
   function viewFormat(sheetId, v) {
     const rng = (r1, r2, c1, c2) => ({ sheetId: sheetId, startRowIndex: r1, endRowIndex: r2, startColumnIndex: c1, endColumnIndex: c2 });
-    const reqs = [headerFmt(sheetId, 3, 4, 0, v.width), width(sheetId, 0, 1, 130), width(sheetId, 1, 2, 190), width(sheetId, 2, v.pre, 90), width(sheetId, v.pre, v.width, 74),
-      { repeatCell: { range: rng(4, 4 + v.rowCount + 1, 2, v.width), cell: { userEnteredFormat: { numberFormat: { type: 'NUMBER', pattern: NUMFMT } } }, fields: 'userEnteredFormat.numberFormat' } },
-      { repeatCell: { range: rng(2, 3, 0, v.width), cell: { userEnteredFormat: { backgroundColor: rgb('EFE9DC'), horizontalAlignment: 'CENTER', textFormat: { bold: true } } }, fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,textFormat)' } },
-      { repeatCell: { range: rng(1, 2, 0, v.width), cell: { userEnteredFormat: { textFormat: { fontSize: 8, foregroundColor: rgb('9A958A') } } }, fields: 'userEnteredFormat.textFormat' } },
-      { repeatCell: { range: rng(4 + v.rowCount, 5 + v.rowCount, 0, v.width), cell: { userEnteredFormat: { backgroundColor: rgb('F4F0E7'), textFormat: { bold: true } } }, fields: 'userEnteredFormat(backgroundColor,textFormat)' } },
-      { updateSheetProperties: { properties: { sheetId: sheetId, gridProperties: { frozenRowCount: 4, frozenColumnCount: 2 } }, fields: 'gridProperties.frozenRowCount,gridProperties.frozenColumnCount' } },
-      protect(sheetId, 'לשונית לצפייה בלבד: נוסחאות. אם מחקת בטעות, בהגדרות האפליקציה יש "תיקון הגיליון"')];
-    (v.groupStarts || []).forEach(r => { reqs.push({ updateBorders: { range: rng(r, r + 1, 0, v.width), top: DARK } }); reqs.push({ updateBorders: { range: rng(r - 1, r, 0, v.width), bottom: DARK } }); });
-    for (let mi = 0; mi < v.count; mi++) reqs.push({ mergeCells: { range: rng(2, 3, v.pre + mi * v.per, v.pre + (mi + 1) * v.per), mergeType: 'MERGE_ALL' } });
+    const f = (r1, r2, c1, c2, fmt, fields) => ({ repeatCell: { range: rng(r1, r2, c1, c2), cell: { userEnteredFormat: fmt }, fields: 'userEnteredFormat(' + fields + ')' } });
+    const MED = { style: 'SOLID_MEDIUM', color: rgb('000000') }, THIN = { style: 'SOLID', color: rgb('B7B7B7') };
+    const BLUE = 'BDD6EE', PINK = 'F9ADC3', NF = { type: 'NUMBER', pattern: '#,##0_ ;[Red]\\-#,##0\\ ' };
+    const g = v.g, pre = v.pre, per = v.per, W = v.width, d0 = v.first - 1, d1 = d0 + v.rowCount, tot = d1;   // d0..d1 = שורות הסעיפים (0-based), tot = שורת הסכום
+    const txt = (size, bold, white) => ({ fontFamily: 'Arial', fontSize: size, bold: !!bold, foregroundColor: rgb(white ? 'FFFFFF' : '000000') });
+    const reqs = [f(0, tot + 3, 0, W, { backgroundColor: rgb('FFFFFF'), textFormat: txt(12), horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE' }, 'backgroundColor,textFormat,horizontalAlignment,verticalAlignment')];
+    const wd = (c1, c2, px) => width(sheetId, c1, c2, px);
+    if (v.isVar) reqs.push(wd(0, 1, 100), wd(1, 2, 170), wd(2, 3, 70), wd(3, 4, 85), wd(pre, W, 66));
+    else reqs.push(wd(0, 1, 30), wd(1, 2, 110), wd(2, 3, 220), wd(3, 4, 75), wd(pre, W, 78));
+    // כותרות (שורות 1-2)
+    reqs.push(f(0, 2, g, W, { backgroundColor: rgb(BLUE), textFormat: txt(12, true) }, 'backgroundColor,textFormat'));
+    reqs.push(f(0, 1, pre, W, { numberFormat: { type: 'DATE', pattern: 'mmm-yy' } }, 'numberFormat'));
+    reqs.push({ updateBorders: { range: rng(0, 2, g, W), top: MED, bottom: MED, innerHorizontal: THIN } });
+    for (let mi = 0; mi < v.count; mi++) {
+      const c0 = pre + mi * per;
+      reqs.push({ mergeCells: { range: rng(0, 1, c0, c0 + per), mergeType: 'MERGE_ALL' } });
+      reqs.push({ updateBorders: { range: rng(0, tot + 1, c0, c0 + 1), left: MED } });
+      if (!v.isVar) reqs.push(f(1, 2, c0, c0 + 1, { backgroundColor: rgb(PINK) }, 'backgroundColor'), f(1, 2, c0 + 1, c0 + 2, { backgroundColor: rgb('FFFFFF') }, 'backgroundColor'));
+      else reqs.push(f(1, 2, c0 + 5, c0 + 6, { backgroundColor: rgb('FFFFFF') }, 'backgroundColor'));
+    }
+    if (!v.isVar) reqs.push({ mergeCells: { range: rng(0, 1, 1, 3), mergeType: 'MERGE_ALL' } }, { mergeCells: { range: rng(1, 2, 1, 3), mergeType: 'MERGE_ALL' } });
+    // סעיפים
+    reqs.push(f(d0, d1, g, W, { numberFormat: NF }, 'numberFormat'), { updateBorders: { range: rng(d0, d1, g, W), innerHorizontal: THIN, innerVertical: THIN, left: THIN, right: THIN, bottom: THIN } });
+    reqs.push(f(d0, d1, g + 1, g + 2, { horizontalAlignment: 'RIGHT', textFormat: txt(12) }, 'horizontalAlignment,textFormat'));
+    reqs.push(f(d0, d1, g, g + 1, { textFormat: txt(12, v.isVar) }, 'textFormat'));
+    reqs.push(f(d0, d1, g + 2, v.isVar ? 4 : 4, { backgroundColor: rgb('666666'), textFormat: txt(11, false, true) }, 'backgroundColor,textFormat'));
+    for (let mi = 0; mi < v.count; mi++) {
+      const c0 = pre + mi * per;
+      if (v.isVar) reqs.push(f(d0, d1, c0, c0 + 5, { backgroundColor: rgb('FFFFCC') }, 'backgroundColor'));
+      else reqs.push(f(d0, d1, c0, c0 + 1, { backgroundColor: rgb('FFFFCC') }, 'backgroundColor'));
+    }
+    v.groups.forEach(x => {
+      if (x[1] > 1) reqs.push({ mergeCells: { range: rng(x[0], x[0] + x[1], g, g + 1), mergeType: 'MERGE_ALL' } });
+      reqs.push(f(x[0], x[0] + x[1], g, g + 1, { horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE', wrapStrategy: 'WRAP', textFormat: txt(13, v.isVar) }, 'horizontalAlignment,verticalAlignment,wrapStrategy,textFormat'));
+      reqs.push({ updateBorders: { range: rng(x[0], x[0] + x[1], g, g + 1), left: MED } });
+    });
+    v.groups.forEach(x => reqs.push({ updateBorders: { range: rng(x[0], x[0] + 1, g, W), top: MED } }));
+    // שורת סיכום
+    const t0 = v.isVar ? 0 : 2;
+    reqs.push(f(tot, tot + 1, t0, W, { backgroundColor: rgb('00B0F0'), textFormat: txt(12, true, true), numberFormat: NF }, 'backgroundColor,textFormat,numberFormat'));
+    reqs.push({ updateBorders: { range: rng(tot, tot + 1, t0, W), top: MED, bottom: MED } });
+    if (v.isVar) {
+      reqs.push({ mergeCells: { range: rng(tot, tot + 1, 0, 2), mergeType: 'MERGE_ALL' } }, { mergeCells: { range: rng(tot + 1, tot + 2, 0, 2), mergeType: 'MERGE_ALL' } });
+      reqs.push(f(tot + 1, tot + 2, 0, W, { textFormat: txt(12, true), numberFormat: NF }, 'textFormat,numberFormat'));
+      for (let mi = 0; mi < v.count; mi++) { const c = pre + mi * per + 5; reqs.push(f(tot + 1, tot + 2, c, c + 1, { backgroundColor: rgb('00B0F0'), textFormat: txt(12, true, true) }, 'backgroundColor,textFormat')); }
+    }
+    reqs.push({ updateSheetProperties: { properties: { sheetId: sheetId, gridProperties: { frozenRowCount: 2, frozenColumnCount: 4 } }, fields: 'gridProperties.frozenRowCount,gridProperties.frozenColumnCount' } });
+    reqs.push(protect(sheetId, 'לשונית לצפייה בלבד: נוסחאות. אם מחקת בטעות, בהגדרות האפליקציה יש "תיקון הגיליון"'));
     return reqs;
   }
   /* עיצוב של לשונית התקציב (יצירה בלבד): כמו הקובץ המקורי (Arial, כחול לכותרות, תכלת לסיכומים, אפור לשורה התחתונה),
    * עם קווי רשת בכל התאים וירוק לסה"כ הכנסות */
-  function layoutFormat(meta) {
-    const S = ID.ITEMS, out = [], N = '"₪"\\ #,##0;[Red]"₪"\\ \\-#,##0', n = meta.length + 2;
+  function layoutFormat(meta, S0, nc0) {
+    const S = S0 || ID.ITEMS, nc = nc0 || 6, out = [], N = '"₪"\\ #,##0;[Red]"₪"\\ \\-#,##0', n = meta.length + 2;
     const rg = (r1, r2, c1, c2) => ({ sheetId: S, startRowIndex: r1, endRowIndex: r2, startColumnIndex: c1, endColumnIndex: c2 });
     const fmt = (r1, r2, c1, c2, f, fields) => out.push({ repeatCell: { range: rg(r1, r2, c1, c2), cell: { userEnteredFormat: f }, fields: 'userEnteredFormat(' + fields + ')' } });
     const W = { foregroundColor: rgb('FFFFFF') }, thin = { style: 'SOLID', color: rgb('D0D0D0') };
     // בסיס: Arial 14 לכל הלשונית, יישור מרכז-אנכי
-    fmt(0, n + 100, 0, 8, { textFormat: { fontFamily: 'Arial', fontSize: 12 }, verticalAlignment: 'MIDDLE' }, 'textFormat,verticalAlignment');
-    fmt(0, n + 100, 4, 6, { numberFormat: { type: 'NUMBER', pattern: N }, horizontalAlignment: 'CENTER' }, 'numberFormat,horizontalAlignment');
+    fmt(0, n + 100, 0, Math.max(8, nc + 1), { textFormat: { fontFamily: 'Arial', fontSize: 12 }, verticalAlignment: 'MIDDLE' }, 'textFormat,verticalAlignment');
+    fmt(0, n + 100, 4, nc, { numberFormat: { type: 'NUMBER', pattern: N }, horizontalAlignment: 'CENTER' }, 'numberFormat,horizontalAlignment');
     fmt(0, n + 100, 3, 4, { horizontalAlignment: 'CENTER' }, 'horizontalAlignment');
     fmt(0, n + 100, 0, 2, { horizontalAlignment: 'RIGHT' }, 'horizontalAlignment');
     meta.forEach(m => {
       const r = m.row - 1, k = m.kind;
-      const box = () => out.push({ updateBorders: { range: rg(r, r + 1, 0, 6), top: thin, bottom: thin, left: thin, right: thin, innerVertical: thin } });
+      const box = () => out.push({ updateBorders: { range: rg(r, r + 1, 0, nc), top: thin, bottom: thin, left: thin, right: thin, innerVertical: thin } });
       const merge = () => out.push({ mergeCells: { range: rg(r, r + 1, 0, 2), mergeType: 'MERGE_ALL' } });
-      const band = (hex, bold) => { fmt(r, r + 1, 0, 6, { backgroundColor: rgb(hex), textFormat: Object.assign({ fontFamily: 'Arial', fontSize: 12, bold: true }, bold ? W : {}) }, 'backgroundColor,textFormat'); };
+      const band = (hex, bold) => { fmt(r, r + 1, 0, nc, { backgroundColor: rgb(hex), textFormat: Object.assign({ fontFamily: 'Arial', fontSize: 12, bold: true }, bold ? W : {}) }, 'backgroundColor,textFormat'); };
       if (k === 'top') {
-        fmt(r, r + 1, 0, 6, { backgroundColor: rgb('FFFFFF'), textFormat: { fontFamily: 'Arial', fontSize: 16, bold: true } }, 'backgroundColor,textFormat'); box(); merge();
+        fmt(r, r + 1, 0, nc, { backgroundColor: rgb('FFFFFF'), textFormat: { fontFamily: 'Arial', fontSize: 16, bold: true } }, 'backgroundColor,textFormat'); box(); merge();
         fmt(r, r + 1, 7, 8, { backgroundColor: rgb('FFFF00'), textFormat: { fontFamily: 'Calibri', fontSize: 16, bold: true } }, 'backgroundColor,textFormat');
         out.push({ updateDimensionProperties: { range: { sheetId: S, dimension: 'ROWS', startIndex: r, endIndex: r + 1 }, properties: { pixelSize: 38 }, fields: 'pixelSize' } });
       } else if (k === 'fillhint') {
         fmt(r, r + 1, 4, 5, { backgroundColor: rgb('FFFF00'), textFormat: { fontFamily: 'Arial', fontSize: 13, bold: true }, horizontalAlignment: 'CENTER' }, 'backgroundColor,textFormat,horizontalAlignment');
         out.push({ updateBorders: { range: rg(r, r + 1, 4, 5), bottom: thin } });
-      } else if (k === 'sechdr') { band('1F3864', true); box(); merge(); fmt(r, r + 1, 3, 6, { horizontalAlignment: 'CENTER', wrapStrategy: 'WRAP' }, 'horizontalAlignment,wrapStrategy'); }
+      } else if (k === 'sechdr') { band('1F3864', true); box(); merge(); fmt(r, r + 1, 3, nc, { horizontalAlignment: 'CENTER', wrapStrategy: 'WRAP' }, 'horizontalAlignment,wrapStrategy'); }
       else if (k === 'total') { band('00B0F0', true); box(); merge(); }
       else if (k === 'inctotal') { band('1B6B35', true); box(); merge(); }
       else if (k === 'exptotal') { band('D32F2F', true); box(); merge(); }
       else if (k === 'bothdr' || k === 'botbal') { band('7F7F7F', true); box(); merge(); }
-      else if (k === 'botrow') { fmt(r, r + 1, 0, 6, { textFormat: { fontFamily: 'Arial', fontSize: 12, bold: true } }, 'textFormat'); box(); merge(); }
+      else if (k === 'botrow') { fmt(r, r + 1, 0, nc, { textFormat: { fontFamily: 'Arial', fontSize: 12, bold: true } }, 'textFormat'); box(); merge(); }
       else if (k === 'datehdr') { fmt(r, r + 1, 3, 4, { textFormat: { fontFamily: 'Arial', fontSize: 12, bold: true } }, 'textFormat'); }
       else if (k === 'income') { box(); merge(); fmt(r, r + 1, 4, 5, { backgroundColor: rgb('FFFFCC') }, 'backgroundColor'); }
       else if (k === 'item') {
         box(); fmt(r, r + 1, 4, 5, { backgroundColor: rgb('FFFFCC') }, 'backgroundColor');
         if (m.first) {
-          out.push({ updateBorders: { range: rg(r, r + 1, 0, 6), top: DARK } }); out.push({ updateBorders: { range: rg(r - 1, r, 0, 6), bottom: DARK } });
+          out.push({ updateBorders: { range: rg(r, r + 1, 0, nc), top: DARK } }); out.push({ updateBorders: { range: rg(r - 1, r, 0, 6), bottom: DARK } });
           if (m.span > 1) out.push({ mergeCells: { range: rg(r, r + m.span, 0, 1), mergeType: 'MERGE_ALL' } });
           fmt(r, r + m.span, 0, 1, { horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE', wrapStrategy: 'WRAP' }, 'horizontalAlignment,verticalAlignment,wrapStrategy');
           out.push({ updateBorders: { range: rg(r, r + m.span, 0, 1), top: thin, bottom: thin, left: thin, right: thin } });
@@ -278,27 +322,127 @@
   }
 
   /* ---- תוכנית יצירה: גיליון חדש בדרייב של המשתמשת ---- */
+
+  /* ---- לשוניות נוספות כמו בקובץ המקורי: סיכום, יתרת תשלומים באשראי, תקציב לבעלי עסק ---- */
+  const BIZ = {"income": ["הכנסה מערוץ רווח אחד", "הכנסות מערוץ רווח שני", "הכנסות מערוץ רווח שלישי", "אחר", "אחר", "אחר", "אחר", "אחר"], "fixed": [["הוצאות משרד", ["שכר דירה", "גז", "חשמל", "מים", "ארנונה", "נקיון", "מיסי קהילה", "אחר", "אחר", "אחר"]], ["תקשורת", ["טלפון", "טלפון נייד", "אינטרנט", "אחר", "אחר"]], ["הפרשות קבועות", ["ביטוח לאומי", "פנסיה", "קרן השתלמות", "אחר", "אחר", "אחר"]], ["תחבורה", ["ביטוח רכב", "כביש 6 + מנהרות+צפון", "רכב טיפולים ורישוי", "חניות"]], ["תוכנות", ["אחר", "אחר", "אחר", "אחר", "אחר"]], ["ספקים בריטיינר", ["רו\"ח", "עו\"ד", "שירותי משרד", "שיווק", "אחר"]], ["עובדים קבועים", ["אחר", "אחר", "אחר", "אחר", "עובד"]], ["הוצאות עסק שונות", ["ביטוח מקצועי", "הוצאות משרד", "השתלמויות", "שונות", "שונות", "שונות", "שונות"]]], "variable": [["הוצאות שיווק ופרסום", ["פייסבוק", "אאטובריין", "טבולה", "גוגל"]], ["רשויות מס", ["מע\"מ", "מס הכנסה", "אחר", "אחר"]], ["תחבורה", ["דלק", "טיפולים לרכב לא צפויים", "חניונים", "תחבורה ציבורית"]], ["הוצאות משרדיות", ["הוצאות גביה משתנות", "אחר", "אחר", "אחר"]], ["עובדים לפי פרויקט", ["אחר", "אחר", "אחר", "אחר", "אחר", "אחר", "מתנות ללקוחות"]], ["שונות", ["שונות", "שונות", "שונות"]]]};
+  const BLUE = '1F3864', LBLUE = 'BDD6EE';
+  const dateF = (m) => '=DATE(' + m.yr + ',' + m.mo + ',1)';
+  const monthLabel = m => MONTHS[m.mo - 1] + ' ' + m.yr;
+  function bizBuild(startYm, count) {
+    const ms = monthList(startYm, count), W = 6 + count, rows = [], meta = [], mk = {};
+    const add = (cells, kind, extra) => { const r = new Array(W).fill(''); Object.keys(cells).forEach(k => { r[k] = cells[k]; }); rows.push(r); meta.push(Object.assign({ row: rows.length, kind: kind }, extra || {})); return rows.length; };
+    const mcells = (o, fn) => { ms.forEach((m, i) => { o[6 + i] = fn(m, i); }); return o; };
+    const L = i => col(i + 1);
+    const sums = [], items = [];
+    add({ 4: 'למלא כאן' }, 'fillhint');
+    const balRow = add({}, 'blank');
+    add(mcells({ 0: 'הכנסות', 4: 'מאזן קיים', 5: 'תקציב חדש' }, monthLabel), 'sechdr');
+    const i0 = rows.length + 1;
+    BIZ.income.forEach(n => { const r = add(mcells({ 0: n, 4: 0, 5: '' }, () => 0), 'income'); rows[r - 1][5] = '=E' + r; items.push(r); });
+    const incT = add({ 0: 'סה"כ הכנסות' }, 'inctotal'); sums.push([incT, i0, incT - 1]);
+    add({ 3: 'תאריכים:' }, 'datehdr');
+    const sec = (title, groups, kind) => {
+      const h = add(mcells({ 0: title, 3: 'ציון ערכים', 4: 'מאזן קיים', 5: 'תקציב חדש' }, monthLabel), 'sechdr'), f0 = rows.length + 1;
+      groups.forEach((g, bi) => g[1].forEach((n, j) => {
+        const r = add(mcells({ 0: j === 0 ? g[0] : '', 1: n, 4: 0 }, () => 0), 'item', { band: bi, first: j === 0, span: 1 });
+        rows[r - 1][5] = '=E' + r; if (j === 0) mk.gi = meta.length - 1; else meta[mk.gi].span++;
+      }));
+      const t = add({ 0: 'סה"כ ' + title }, 'exptotal'); sums.push([t, f0, t - 1]); add({}, 'blank'); return t;
+    };
+    const fixT = sec('הוצאות קבועות', BIZ.fixed), varT = sec('הוצאות משתנות', BIZ.variable);
+    add({ 0: 'השורה התחתונה' }, 'bothdr');
+    const bi_ = add({ 0: 'סה"כ הכנסות' }, 'inctotal'), be_ = add({ 0: 'סה"כ הוצאות' }, 'exptotal'), bb_ = add({ 0: 'סה"כ יתרה' }, 'botbal');
+    for (let c = 4; c < W; c++) {
+      const cl = L(c);
+      sums.forEach(sm => { rows[sm[0] - 1][c] = '=SUM(' + cl + sm[1] + ':' + cl + sm[2] + ')'; });
+      rows[bi_ - 1][c] = '=' + cl + incT; rows[be_ - 1][c] = '=' + cl + varT + '+' + cl + fixT; rows[bb_ - 1][c] = '=' + cl + bi_ + '-' + cl + be_; rows[balRow - 1][c] = '=' + cl + bb_;
+    }
+    return { values: rows, meta: meta, width: W, count: count, ms: ms };
+  }
+  function bizFormat(b) {
+    const S = ID.BIZ, rg = (r1, r2, c1, c2) => ({ sheetId: S, startRowIndex: r1, endRowIndex: r2, startColumnIndex: c1, endColumnIndex: c2 });
+    const out = layoutFormat(b.meta, S, b.width);
+    out.push(width(S, 0, 1, 115), width(S, 1, 2, 200), width(S, 2, 3, 24), width(S, 3, 4, 100), width(S, 4, 5, 120), width(S, 5, 6, 130), width(S, 6, b.width, 95));
+    b.meta.forEach(m => { if (m.kind === 'item' || m.kind === 'income') out.push({ repeatCell: { range: rg(m.row - 1, m.row, 6, b.width), cell: { userEnteredFormat: { backgroundColor: rgb('FFFFCC') } }, fields: 'userEnteredFormat(backgroundColor)' } }); });
+    out.push({ updateSheetProperties: { properties: { sheetId: S, gridProperties: { frozenRowCount: 3, frozenColumnCount: 6 } }, fields: 'gridProperties.frozenRowCount,gridProperties.frozenColumnCount' } });
+    return out;
+  }
+  /* סיכום: חודש לחודש, מחושב מהלשוניות "התקציב", "הוצאות קבועות" ו"הוצאות משתנות". רק "הכנסה בפועל" מוזנת */
+  function summaryBuild(startYm, count, vv, fv, marks) {
+    const ms = monthList(startYm, count), W = 1 + count, rows = []; for (let r = 0; r < 12; r++) rows.push(new Array(W).fill(''));
+    const FX = q(T.FIXED), VR = q(T.VAR), IT = q(T.ITEMS), ft = fv.first + fv.rowCount, vt = vv.first + vv.rowCount;
+    rows[0][1] = 'חודש התחלה:'; rows[0][3] = dateF(ms[0]);
+    ['', '', ''].length;
+    ['הכנסה מתוכננת (אוטומטי)', 'הכנסה בפועל (להזין)', 'תקציב קבועות (אוטומטי)', 'קבועות בפועל (אוטומטי)', 'תקציב משתנות (אוטומטי)', 'משתנות בפועל (אוטומטי)', 'יתרת תקציב מתוכננת (אוטומטי)', 'יתרת תקציב בפועל (אוטומטי)', 'גרעון/עודף'].forEach((t, i) => { rows[3 + i][0] = t; });
+    ms.forEach((m, i) => {
+      const c = i + 1, cl = col(c + 1), fc = col(fv.pre + i * fv.per + 1), vc = col(vv.pre + i * vv.per + 6);
+      rows[2][c] = dateF(m);
+      rows[3][c] = '=' + IT + '!$F$' + (marks && marks.incT || 12); rows[4][c] = 0;
+      rows[5][c] = '=' + FX + '!$D$' + ft; rows[6][c] = '=' + FX + '!' + fc + ft;
+      rows[7][c] = '=' + VR + '!$C$' + vt; rows[8][c] = '=' + VR + '!' + vc + (vt + 1);
+      rows[9][c] = '=' + cl + '4-' + cl + '6-' + cl + '8'; rows[10][c] = '=' + cl + '5-' + cl + '7-' + cl + '9'; rows[11][c] = '=' + cl + '11-' + cl + '10';
+    });
+    return { values: rows, width: W, count: count };
+  }
+  function summaryFormat(b) {
+    const S = ID.SUM, rg = (r1, r2, c1, c2) => ({ sheetId: S, startRowIndex: r1, endRowIndex: r2, startColumnIndex: c1, endColumnIndex: c2 });
+    const thin = { style: 'SOLID', color: rgb('B7B7B7') }, MED = { style: 'SOLID_MEDIUM', color: rgb('000000') }, NF = { type: 'NUMBER', pattern: '#,##0_ ;[Red]\\-#,##0\\ ' };
+    const f = (r1, r2, c1, c2, fmt, fields) => ({ repeatCell: { range: rg(r1, r2, c1, c2), cell: { userEnteredFormat: fmt }, fields: 'userEnteredFormat(' + fields + ')' } });
+    return [
+      f(0, 20, 0, b.width + 1, { textFormat: { fontFamily: 'Arial', fontSize: 12 }, horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE' }, 'textFormat,horizontalAlignment,verticalAlignment'),
+      width(S, 0, 1, 240), width(S, 1, b.width, 85),
+      f(0, 1, 1, 2, { textFormat: { fontFamily: 'Arial', fontSize: 12, bold: true }, horizontalAlignment: 'RIGHT' }, 'textFormat,horizontalAlignment'), { mergeCells: { range: rg(0, 1, 1, 3), mergeType: 'MERGE_ALL' } },
+      f(0, 1, 3, 4, { backgroundColor: rgb('0070C0'), textFormat: { fontFamily: 'Arial', fontSize: 12, bold: true, foregroundColor: rgb('FFFFFF') }, numberFormat: { type: 'DATE', pattern: 'mmm-yy' } }, 'backgroundColor,textFormat,numberFormat'),
+      f(2, 3, 0, b.width, { backgroundColor: rgb('0070C0'), textFormat: { fontFamily: 'Arial', fontSize: 12, bold: true, foregroundColor: rgb('FFFFFF') }, numberFormat: { type: 'DATE', pattern: 'mmm-yy' } }, 'backgroundColor,textFormat,numberFormat'),
+      f(3, 12, 1, b.width, { numberFormat: NF }, 'numberFormat'), f(3, 12, 0, 1, { textFormat: { fontFamily: 'Arial', fontSize: 12, bold: true } }, 'textFormat'),
+      f(4, 5, 1, b.width, { backgroundColor: rgb('FFFFCC') }, 'backgroundColor'),
+      f(11, 12, 0, b.width, { backgroundColor: rgb('00B0F0'), textFormat: { fontFamily: 'Arial', fontSize: 12, bold: true } }, 'backgroundColor,textFormat'),
+      { updateBorders: { range: rg(2, 12, 0, b.width), top: MED, bottom: MED, left: MED, right: MED, innerHorizontal: thin, innerVertical: thin } },
+      { updateSheetProperties: { properties: { sheetId: S, gridProperties: { frozenRowCount: 3, frozenColumnCount: 1 } }, fields: 'gridProperties.frozenRowCount,gridProperties.frozenColumnCount' } }];
+  }
+  function creditBuild(startYm, count) {
+    const ms = monthList(startYm, count), W = 2 + count, rows = []; for (let r = 0; r < 24; r++) rows.push(new Array(W).fill(''));
+    rows[0][0] = 'יתרת תשלומים באשראי'; rows[1][0] = 'שם העסק'; rows[23][0] = 'סה"כ';
+    ms.forEach((m, i) => { const c = 2 + i, cl = col(c + 1); rows[1][c] = dateF(m); rows[23][c] = '=SUM(' + cl + '3:' + cl + '23)'; });
+    return { values: rows, width: W };
+  }
+  function creditFormat(b) {
+    const S = ID.CREDIT, rg = (r1, r2, c1, c2) => ({ sheetId: S, startRowIndex: r1, endRowIndex: r2, startColumnIndex: c1, endColumnIndex: c2 });
+    const thin = { style: 'SOLID', color: rgb('B7B7B7') }, NF = { type: 'NUMBER', pattern: '#,##0_ ;[Red]\\-#,##0\\ ' };
+    const f = (r1, r2, c1, c2, fmt, fields) => ({ repeatCell: { range: rg(r1, r2, c1, c2), cell: { userEnteredFormat: fmt }, fields: 'userEnteredFormat(' + fields + ')' } });
+    return [
+      f(0, 30, 0, b.width + 1, { textFormat: { fontFamily: 'Arial', fontSize: 12 }, horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE' }, 'textFormat,horizontalAlignment,verticalAlignment'),
+      width(S, 0, 1, 230), width(S, 1, 2, 30), width(S, 2, b.width, 85),
+      f(0, 1, 0, 1, { textFormat: { fontFamily: 'Arial', fontSize: 16, bold: true }, horizontalAlignment: 'RIGHT' }, 'textFormat,horizontalAlignment'),
+      f(1, 2, 0, b.width, { backgroundColor: rgb('BDD6EE'), textFormat: { fontFamily: 'Arial', fontSize: 12, bold: true }, numberFormat: { type: 'DATE', pattern: 'mmm-yy' } }, 'backgroundColor,textFormat,numberFormat'),
+      f(2, 24, 2, b.width, { numberFormat: NF }, 'numberFormat'), f(2, 23, 0, 1, { horizontalAlignment: 'RIGHT' }, 'horizontalAlignment'),
+      f(23, 24, 0, b.width, { backgroundColor: rgb('00B0F0'), textFormat: { fontFamily: 'Arial', fontSize: 12, bold: true } }, 'backgroundColor,textFormat'),
+      { updateBorders: { range: rg(1, 24, 0, b.width), top: thin, bottom: thin, left: thin, right: thin, innerHorizontal: thin, innerVertical: thin } },
+      { updateSheetProperties: { properties: { sheetId: S, gridProperties: { frozenRowCount: 2, frozenColumnCount: 1 } }, fields: 'gridProperties.frozenRowCount,gridProperties.frozenColumnCount' } }];
+  }
+
   function plan(opts) {
     const items = orderItems(opts.items && opts.items.length ? opts.items : sampleItems());
     const startYm = opts.startYm, months = Math.max(1, Math.min(12, opts.months || 12));
     const lay = buildItemsLayout(items, opts.income);
     const vv = viewValues(lay.items, true, startYm, months, 'sheet'), fv = viewValues(lay.items, false, startYm, months, 'sheet');
-    const sheets = [[ID.ITEMS, T.ITEMS, '2E7D32'], [ID.VAR, T.VAR, '9A958A'], [ID.FIXED, T.FIXED, '9A958A'], [ID.LOG, T.LOG, '1565C0'], [ID.SNAP, T.SNAP, '9A958A'], [ID.SET, T.SET, '9A958A']];
+    const bz = bizBuild(startYm, months), sm = summaryBuild(startYm, months, vv, fv, lay.marks), cr = creditBuild(startYm, months);
+    const sheets = [[ID.ITEMS, T.ITEMS, '2E7D32'], [ID.FIXED, T.FIXED, '9A958A'], [ID.VAR, T.VAR, '9A958A'], [ID.SUM, T.SUM, '2E7D32', sm.width + 2], [ID.CREDIT, T.CREDIT, '9A958A', cr.width + 2], [ID.BIZ, T.BIZ, '9A958A', bz.width + 2], [ID.LOG, T.LOG, '1565C0'], [ID.SNAP, T.SNAP, '9A958A'], [ID.SET, T.SET, '9A958A']];
     const formulas = [   // נכנסים כנוסחאות (USER_ENTERED)
-      { range: q(T.VAR) + '!A1', values: vv.grid }, { range: q(T.FIXED) + '!A1', values: fv.grid }].concat(totalsFormulas(lay.marks), defaultBudgetFormulas(lay.fdef));
+      { range: q(T.VAR) + '!A1', values: vv.grid }, { range: q(T.FIXED) + '!A1', values: fv.grid }, { range: q(T.SUM) + '!A1', values: sm.values }, { range: q(T.CREDIT) + '!A1', values: cr.values }, { range: q(T.BIZ) + '!A1', values: bz.values }].concat(totalsFormulas(lay.marks), defaultBudgetFormulas(lay.fdef));
     const raw = [   // נכנסים כמו שהם (RAW): שמות סעיפים לא צריכים להתפרש כתאריך או נוסחה
       { range: q(T.ITEMS) + '!A1', values: lay.values }, { range: q(T.LOG) + '!A1', values: [LOG_HEADER] }, { range: q(T.SNAP) + '!A1', values: [SNAP_HEADER] },
       { range: q(T.SET) + '!A1', values: settingsValues(startYm, months, opts.startDay, opts.opening) }, { range: q(T.SET) + '!A7', values: [[NOTE_SET]] }];
     if (opts.prefsJson) raw.push({ range: q(T.SET) + '!E1', values: [['העדפות האפליקציה (לא לערוך)'], [opts.prefsJson]] });
     else raw.push({ range: q(T.SET) + '!E1', values: [['העדפות האפליקציה (לא לערוך)']] });
-    return { items: lay.items, meta: lay.meta, marks: lay.marks, layout: 'sheet', startYm: startYm, months: months, sheets: sheets, formulas: formulas, raw: raw, views: { VAR: vv, FIXED: fv } };
+    return { items: lay.items, meta: lay.meta, marks: lay.marks, layout: 'sheet', startYm: startYm, months: months, sheets: sheets, formulas: formulas, raw: raw, views: { VAR: vv, FIXED: fv }, extras: { biz: bz, sum: sm, credit: cr } };
   }
   function formatRequests(p) {
-    return staticFormat(p.items, p.layout, p.marks).concat(p.meta ? layoutFormat(p.meta) : [], viewFormat(ID.VAR, p.views.VAR), viewFormat(ID.FIXED, p.views.FIXED));
+    return staticFormat(p.items, p.layout, p.marks).concat(p.meta ? layoutFormat(p.meta) : [], viewFormat(ID.VAR, p.views.VAR), viewFormat(ID.FIXED, p.views.FIXED), p.extras ? bizFormat(p.extras.biz).concat(summaryFormat(p.extras.sum), creditFormat(p.extras.credit)) : []);
   }
   const createBody = (title, p) => ({
     properties: { title: title, timeZone: 'Asia/Jerusalem' },
-    sheets: p.sheets.map((s, i) => ({ properties: { sheetId: s[0], title: s[1], index: i, rightToLeft: true, tabColorStyle: { rgbColor: rgb(s[2]) }, gridProperties: { rowCount: s[0] === ID.LOG ? 2000 : 600, columnCount: Math.max(14, s[0] === ID.VAR ? p.views.VAR.width + 1 : s[0] === ID.FIXED ? p.views.FIXED.width + 1 : 14) } } }))
+    sheets: p.sheets.map((s, i) => ({ properties: { sheetId: s[0], title: s[1], index: i, rightToLeft: true, tabColorStyle: { rgbColor: rgb(s[2]) }, gridProperties: { rowCount: s[0] === ID.LOG ? 2000 : 600, columnCount: Math.max(s[3] || 14, s[0] === ID.VAR ? p.views.VAR.width + 1 : s[0] === ID.FIXED ? p.views.FIXED.width + 1 : 14) } } }))
   });
 
   /* תיקון קובץ קיים: נוסחאות הצפייה והגנות בלבד (לא נוגעים בנתונים). items: כל הסעיפים עם row = שורה בלשונית התקציב */
