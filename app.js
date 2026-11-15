@@ -389,19 +389,21 @@ function home() {
   const groups = sortedGroups(isVar ? S.data.variable : S.data.fixed, S.tab);
   const total = groups.reduce((a, g) => a + g.items.reduce((x, i) => x + i.budget, 0), 0);   // התקציב החודשי כמו שהוא, בלי גלגולים וחוסרים
   const cur = S.month === S.current.month;
+  /* גיליון חדש בלי אף תקציב: אין מה לחפש או למיין, אז רק המדריך */
+  const nb = S.fmt === 2 && !S.loading && !S.q.trim() && !sortedGroups(S.data.variable, 'var').length && !sortedGroups(S.data.fixed, 'fixed').length;
   return `
   <div class="top"><span class="app">מעקב הוצאות עם מאיה<span id="sp">${syncPill()}</span></span>${isLive() ? `<button class="gb" data-act="lock" aria-label="יציאה מהתקציב">${icon('lock')}</button>` : ''}</div>
-  <div class="mt ${showSummary() ? 'hs' : ''}"><button class="st" data-act="prev" ${prevMonth() ? '' : 'disabled'} aria-label="חודש קודם">${icon('arrow-right-s')}</button>
+  <div ${nb ? 'hidden' : ''}><div class="mt ${showSummary() ? 'hs' : ''}"><button class="st" data-act="prev" ${prevMonth() ? '' : 'disabled'} aria-label="חודש קודם">${icon('arrow-right-s')}</button>
     <b>${MONTHS[S.month - 1] || ''} ${S.ym ? Math.floor(S.ym / 100) : new Date().getFullYear()}</b>
     <button class="st" data-act="next" ${nextMonth() ? '' : 'disabled'} aria-label="חודש הבא">${icon('arrow-left-s')}</button>
-    ${showSummary() ? `<button class="sumbtn" data-act="summary">${icon('file-list-3')}סיכום ${S.curYm && S.ym < S.curYm ? (MONTHS[S.month - 1] || 'חודש') : 'החודש'}</button>` : ''}</div>
+    ${showSummary() ? `<button class="sumbtn" data-act="summary">${icon('file-list-3')}סיכום ${S.curYm && S.ym < S.curYm ? (MONTHS[S.month - 1] || 'חודש') : 'החודש'}</button>` : ''}</div></div>
   ${banners()}
-  ${searchField('hq', 'חיפוש לפי סעיף, תגית או הערה', S.q, 'clearQ')}
+  <div ${nb ? 'hidden' : ''}>${searchField('hq', 'חיפוש לפי סעיף, תגית או הערה', S.q, 'clearQ')}
   <div id="tabs" ${S.q.trim() ? 'hidden' : ''}>
   <div class="seg"><button data-act="tab" data-v="var" class="${isVar ? 'on' : ''}">שוטפות</button><button data-act="tab" data-v="fixed" class="${!isVar ? 'on' : ''}">קבועות</button></div>
   ${isVar ? `<div class="seg sm"><button data-act="period" data-v="week" class="${S.period === 'week' ? 'on' : ''}" ${cur ? '' : 'disabled'}>שבוע</button><button data-act="period" data-v="month" class="${S.period === 'month' || !cur ? 'on' : ''}">חודש</button></div>` : ''}
   <div class="bu2"><span>תקציב ${isVar ? 'שוטפות' : 'קבועות'} <b class="num">${fmt(total)}</b>${S.preview ? ' · תצוגה מקדימה' : ''}</span></div>
-  </div>
+  </div></div>
   <div class="cats" id="cats">${catsHtml()}</div>
   ${nav()}`;
 }
@@ -608,7 +610,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'8.4 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'8.5 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
