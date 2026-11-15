@@ -426,19 +426,19 @@
     const startYm = opts.startYm, months = Math.max(1, Math.min(12, opts.months || 12));
     const lay = buildItemsLayout(items, opts.income);
     const vv = viewValues(lay.items, true, startYm, months, 'sheet'), fv = viewValues(lay.items, false, startYm, months, 'sheet');
-    const bz = bizBuild(startYm, months), sm = summaryBuild(startYm, months, vv, fv, lay.marks), cr = creditBuild(startYm, months);
-    const sheets = [[ID.ITEMS, T.ITEMS, '2E7D32'], [ID.FIXED, T.FIXED, '9A958A'], [ID.VAR, T.VAR, '9A958A'], [ID.SUM, T.SUM, '2E7D32', sm.width + 2], [ID.CREDIT, T.CREDIT, '9A958A', cr.width + 2], [ID.BIZ, T.BIZ, '9A958A', bz.width + 2], [ID.LOG, T.LOG, '1565C0'], [ID.SNAP, T.SNAP, '9A958A'], [ID.SET, T.SET, '9A958A']];
+    const sm = summaryBuild(startYm, months, vv, fv, lay.marks);
+    const sheets = [[ID.ITEMS, T.ITEMS, '2E7D32'], [ID.FIXED, T.FIXED, '9A958A'], [ID.VAR, T.VAR, '9A958A'], [ID.SUM, T.SUM, '2E7D32', sm.width + 2], [ID.LOG, T.LOG, '1565C0'], [ID.SNAP, T.SNAP, '9A958A'], [ID.SET, T.SET, '9A958A']];
     const formulas = [   // נכנסים כנוסחאות (USER_ENTERED)
-      { range: q(T.VAR) + '!A1', values: vv.grid }, { range: q(T.FIXED) + '!A1', values: fv.grid }, { range: q(T.SUM) + '!A1', values: sm.values }, { range: q(T.CREDIT) + '!A1', values: cr.values }, { range: q(T.BIZ) + '!A1', values: bz.values }].concat(totalsFormulas(lay.marks), defaultBudgetFormulas(lay.fdef));
+      { range: q(T.VAR) + '!A1', values: vv.grid }, { range: q(T.FIXED) + '!A1', values: fv.grid }, { range: q(T.SUM) + '!A1', values: sm.values }].concat(totalsFormulas(lay.marks), defaultBudgetFormulas(lay.fdef));
     const raw = [   // נכנסים כמו שהם (RAW): שמות סעיפים לא צריכים להתפרש כתאריך או נוסחה
       { range: q(T.ITEMS) + '!A1', values: lay.values }, { range: q(T.LOG) + '!A1', values: [LOG_HEADER] }, { range: q(T.SNAP) + '!A1', values: [SNAP_HEADER] },
       { range: q(T.SET) + '!A1', values: settingsValues(startYm, months, opts.startDay, opts.opening) }, { range: q(T.SET) + '!A7', values: [[NOTE_SET]] }];
     if (opts.prefsJson) raw.push({ range: q(T.SET) + '!E1', values: [['העדפות האפליקציה (לא לערוך)'], [opts.prefsJson]] });
     else raw.push({ range: q(T.SET) + '!E1', values: [['העדפות האפליקציה (לא לערוך)']] });
-    return { items: lay.items, meta: lay.meta, marks: lay.marks, layout: 'sheet', startYm: startYm, months: months, sheets: sheets, formulas: formulas, raw: raw, views: { VAR: vv, FIXED: fv }, extras: { biz: bz, sum: sm, credit: cr } };
+    return { items: lay.items, meta: lay.meta, marks: lay.marks, layout: 'sheet', startYm: startYm, months: months, sheets: sheets, formulas: formulas, raw: raw, views: { VAR: vv, FIXED: fv }, extras: { sum: sm } };
   }
   function formatRequests(p) {
-    return staticFormat(p.items, p.layout, p.marks).concat(p.meta ? layoutFormat(p.meta) : [], viewFormat(ID.VAR, p.views.VAR), viewFormat(ID.FIXED, p.views.FIXED), p.extras ? bizFormat(p.extras.biz).concat(summaryFormat(p.extras.sum), creditFormat(p.extras.credit)) : []);
+    return staticFormat(p.items, p.layout, p.marks).concat(p.meta ? layoutFormat(p.meta) : [], viewFormat(ID.VAR, p.views.VAR), viewFormat(ID.FIXED, p.views.FIXED), p.extras ? summaryFormat(p.extras.sum) : []);
   }
   const createBody = (title, p) => ({
     properties: { title: title, timeZone: 'Asia/Jerusalem' },
