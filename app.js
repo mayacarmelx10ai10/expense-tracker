@@ -610,7 +610,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'8.9 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'9.0 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -749,7 +749,7 @@ async function wizCreate() {
     Bridge.configure({ sheetId: '', getToken: () => Auth.token() });
     const onProgress = (pct, msg) => { w.pct = Math.max(w.pct, pct); cap = Math.min(99, pct + 22); w.msg = msg; paint(); };
     const r = w.mig ? await Bridge.call('migrate', { oldId: w.mig.id, onProgress: onProgress }) : await Bridge.createFile({ startYm: w.startYm, months: w.months, onProgress: onProgress });
-    w.pct = 100; w.msg = 'הגיליון מוכן'; paint(); clearInterval(creep); await new Promise(res => setTimeout(res, 500));
+    w.pct = 100; w.msg = 'הגיליון מוכן. מחברים את האפליקציה אליו…'; paint(); clearInterval(creep);
     S.cfg = { sheetId: r.id, sheetName: r.name }; LS.set('cfg', S.cfg); setupBridge();
     S.wiz = null; S.needAuth = false; S.budgetCfg = null; S.error = null; S.newFileUrl = r.url;
     await connectFlow(); flush();

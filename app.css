@@ -556,3 +556,37 @@ body{touch-action:manipulation}
 .wiz .msum{list-style:none;margin:0 0 var(--s3);padding:0}
 .wiz .msum li{display:flex;align-items:baseline;gap:10px;padding:var(--s2) 0;border-bottom:1px solid var(--hair);font-size:15px}
 .wiz .msum li b{min-width:34px;font-size:18px}
+
+/* מסך החיבור לגיליון (מכסה את כל המסך בזמן שהאפליקציה מתחברת וקוראת את התקציב) */
+#conn{display:none}
+#conn.on{display:flex;position:fixed;inset:0;z-index:60;background:var(--bg);align-items:center;justify-content:center;animation:cnIn .25s ease both}
+@keyframes cnIn{from{opacity:0}to{opacity:1}}
+.cn{width:min(92vw,360px);padding:var(--s5);text-align:center}
+.cn h2{font-size:22px;margin:0 0 var(--s5)}
+.cn-stage{position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:var(--s5)}
+.cn-node{width:84px;height:84px;border-radius:24px;background:var(--card);border:1px solid var(--hair);display:flex;align-items:center;justify-content:center;animation:cnBob 2.4s ease-in-out infinite}
+.cn-node:last-child{animation-delay:.6s}
+.cn-node img{width:52px;height:52px;border-radius:14px}
+.cn-node svg{width:38px;height:auto}
+@keyframes cnBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.cn-line{position:relative;width:84px;height:3px;margin:0 8px;border-radius:3px;background:var(--hair)}
+.cn-line.done{background:var(--ink)}
+.cn-dot{position:absolute;top:-4px;left:0;width:11px;height:11px;border-radius:50%;background:var(--ink);animation:cnDot 1.3s ease-in-out infinite}
+.cn-line.done .cn-dot{display:none}
+@keyframes cnDot{0%{left:0;opacity:0}15%{opacity:1}85%{opacity:1}100%{left:calc(100% - 11px);opacity:0}}
+.cn-check{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.cn-check span{width:46px;height:46px;border-radius:50%;background:var(--ink);color:#fff;font-size:24px;font-weight:700;display:flex;align-items:center;justify-content:center;animation:cnPop .5s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes cnPop{from{transform:scale(0)}to{transform:scale(1)}}
+.cn-check i{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:var(--pink);transform:rotate(var(--a)) translateY(0);opacity:0;animation:cnRay .7s ease-out .2s both}
+@keyframes cnRay{0%{opacity:1;transform:rotate(var(--a)) translateY(-26px)}100%{opacity:0;transform:rotate(var(--a)) translateY(-58px)}}
+.cn-steps{list-style:none;margin:0 auto var(--s4);padding:0;display:inline-block;text-align:right}
+.cn-steps li{display:flex;align-items:center;gap:var(--s3);padding:7px 0;font-size:15px;color:var(--mute)}
+.cn-steps li b{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid var(--line);box-sizing:border-box}
+.cn-steps li.act{color:var(--ink);font-weight:600}
+.cn-steps li.act b{border-color:var(--ink) transparent var(--ink) var(--ink);animation:cnSpin .8s linear infinite}
+.cn-steps li.done{color:var(--ink)}
+.cn-steps li.done b{background:var(--ink);border-color:var(--ink);position:relative}
+.cn-steps li.done b::after{content:"✓";position:absolute;inset:0;color:#fff;font-size:12px;line-height:16px;text-align:center}
+.cn-steps small{display:block;font-size:12px;font-weight:400;color:var(--mute)}
+@keyframes cnSpin{to{transform:rotate(360deg)}}
+.cn-sub{font-size:14px;color:var(--mute);min-height:20px}
