@@ -610,7 +610,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'8.7 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'8.8 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -686,8 +686,24 @@ function budgetBlock() {
 
 /* ---------- אשף: יצירת גיליון תקציב חדש ---------- */
 function wizYms() { const n = new Date(), out = []; for (let i = -1; i < 6; i++) { const d = new Date(n.getFullYear(), n.getMonth() + i, 1); out.push(d.getFullYear() * 100 + d.getMonth() + 1); } return out; }
+function migScreen() {
+  const w = S.wiz, m = w.mig, sm = m.summary;
+  const li = (n, t) => `<li><b class="num">${n}</b>${t}</li>`;
+  return `<div class="top"><span class="app">מעקב הוצאות עם מאיה</span></div>
+  <div class="wel wiz">
+    <h2>העברה מקובץ קודם</h2>
+    <div class="gname"><div class="gtag">${SHEETS_ICON.replace('width="56" height="72"', 'width="18" height="23"')}<span>הקובץ שנבחר:</span></div><b>${esc(m.name)}</b></div>
+    ${!sm ? '<p class="sp">קוראת את הקובץ…</p>' : `<p>נמצאו בקובץ:</p>
+    <ul class="msum">${li(sm.fixed + sm.variable, 'סעיפי הוצאות (' + sm.withBudget + ' עם תקציב)')}${li(sm.income, 'סעיפי הכנסה')}${li(sm.entries, 'הוצאות שהוזנו' + (sm.typed ? ' (מתוכן ' + sm.typed + ' שהוקלדו ישירות בגיליון)' : ''))}</ul>
+    <p class="sp small">ייווצר גיליון חדש עם אותם סעיפים, תקציבים, יתרות, הערות והוצאות. הקובץ הקודם לא ישתנה.</p>`}
+    ${S.error ? `<div class="hint" style="color:var(--pt)">${esc(S.error)}</div>` : ''}
+    ${w.busy ? `<div class="prog" id="wizProg"><div class="pmsg" id="wizMsg">${esc(w.msg || 'מתחילה…')}</div><div class="pbar"><i id="wizBar" style="width:${w.pct || 0}%"></i></div><div class="ppct num" id="wizPct">${Math.round(w.pct || 0)}%</div><div class="psub">זה לוקח כחצי דקה. אפשר להשאיר את המסך פתוח.</div></div>`
+    : `${sm ? '<button class="btn big" data-act="wizCreate">העברה ויצירת גיליון חדש</button>' : ''}<button class="lnk wback" data-act="migBack">חזרה</button>`}
+  <div class="foot">גרסה <span class="num">${APP_VERSION}</span></div></div>`;
+}
 function wizard() {
   const w = S.wiz, yms = wizYms(), cur = new Date().getFullYear() * 100 + new Date().getMonth() + 1;
+  if (w.mig) return migScreen();
   return `<div class="top"><span class="app">מעקב הוצאות עם מאיה</span></div>
   <div class="wel wiz">
     <h2>יצירת תקציב בדרייב</h2>
@@ -700,8 +716,27 @@ function wizard() {
     ${S.error ? `<div class="hint" style="color:var(--pt)">${esc(S.error)}</div>` : ''}
     ${w.busy ? `<div class="prog" id="wizProg"><div class="pmsg" id="wizMsg">${esc(w.msg || 'מתחילה…')}</div><div class="pbar"><i id="wizBar" style="width:${w.pct || 0}%"></i></div><div class="ppct num" id="wizPct">${Math.round(w.pct || 0)}%</div><div class="psub">זה לוקח כחצי דקה. אפשר להשאיר את המסך פתוח.</div></div>`
     : `<button class="btn big" data-act="wizCreate">יצירת הגיליון</button>
+    <button class="lnk" data-act="migPick" style="margin-top:var(--s4)">יש לי כבר קובץ תקציב. להעביר ממנו</button>
     <button class="lnk wback" data-act="wizCancel">חזרה</button>`}
   <div class="foot">גרסה <span class="num">${APP_VERSION}</span></div></div>`;
+}
+async function migPick() {
+  const c = Auth.conf();
+  if (!Auth.ready() || !c.apiKey || !c.appId) { toast('חסרות הגדרות Google ב-config.js'); return; }
+  try { if (!Auth.valid()) await Auth.signIn(); } catch (e) { toast('ההתחברות לא הושלמה'); return; }
+  await new Promise(res => { if (window.gapi && gapi.load) gapi.load('picker', res); else setTimeout(res, 800); });
+  if (!window.google || !google.picker) { toast('בורר הקבצים לא נטען, נסי שוב'); return; }
+  const view = new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS).setMode(google.picker.DocsViewMode.LIST);
+  new google.picker.PickerBuilder().setAppId(c.appId).setOAuthToken(Auth.tok).setDeveloperKey(c.apiKey).setLocale('iw').addView(view)
+    .setCallback(async d => {
+      if (d.action !== google.picker.Action.PICKED) return;
+      const f = d.docs[0], w = S.wiz; w.mig = { id: f.id, name: f.name, summary: null }; S.error = null; render();
+      try {
+        Bridge.configure({ sheetId: '', getToken: () => Auth.token() });
+        w.mig.summary = (await Bridge.call('migrate', { oldId: f.id, dryRun: true })).summary;
+      } catch (err) { w.mig = null; S.error = 'לא הצלחתי לקרוא את הקובץ: ' + (err.message || err); }
+      render();
+    }).build().setVisible(true);
 }
 async function wizCreate() {
   const w = S.wiz; if (w.busy) return;
@@ -712,8 +747,8 @@ async function wizCreate() {
   const creep = setInterval(() => { if (w.pct < cap - 1) { w.pct += (cap - w.pct) * 0.08; paint(); } }, 400);
   try {
     Bridge.configure({ sheetId: '', getToken: () => Auth.token() });
-    const r = await Bridge.createFile({ startYm: w.startYm, months: w.months,
-      onProgress: (pct, msg) => { w.pct = Math.max(w.pct, pct); cap = Math.min(99, pct + 22); w.msg = msg; paint(); } });
+    const onProgress = (pct, msg) => { w.pct = Math.max(w.pct, pct); cap = Math.min(99, pct + 22); w.msg = msg; paint(); };
+    const r = w.mig ? await Bridge.call('migrate', { oldId: w.mig.id, onProgress: onProgress }) : await Bridge.createFile({ startYm: w.startYm, months: w.months, onProgress: onProgress });
     w.pct = 100; w.msg = 'הגיליון מוכן'; paint(); clearInterval(creep); await new Promise(res => setTimeout(res, 500));
     S.cfg = { sheetId: r.id, sheetName: r.name }; LS.set('cfg', S.cfg); setupBridge();
     S.wiz = null; S.needAuth = false; S.budgetCfg = null; S.error = null; S.newFileUrl = r.url;
@@ -945,6 +980,8 @@ async function act(a, t) {
     case 'useFile': { const f = (S.files || []).find(x => x.id === k); if (f) useFile(f); break; }
     case 'filesBack': S.files = null; render(); break;
     case 'wizStart': S.files = null; S.wiz = { startYm: new Date().getFullYear() * 100 + new Date().getMonth() + 1, months: 12, busy: false }; S.error = null; window.scrollTo(0, 0); render(); break;
+    case 'migBack': S.wiz.mig = null; S.error = null; render(); break;
+    case 'migPick': migPick(); break;
     case 'wizCancel': S.wiz = null; S.error = null; render(); break;
     case 'wizCreate': wizCreate(); break;
     case 'copyLink': { try { await navigator.clipboard.writeText(k); toast('הקישור הועתק'); } catch (e) { toast('לא הצלחתי להעתיק'); } break; }

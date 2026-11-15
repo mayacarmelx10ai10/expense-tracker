@@ -100,7 +100,10 @@
     add({ 4: 'למלא כאן' }, 'fillhint');
     marks.incH = add({ 0: 'הכנסות', 4: 'מאזן קיים', 5: 'תקציב חדש' }, 'sechdr');
     const inc = income && income.length ? income : CATALOG.income;
-    inc.forEach(n => { const r = add({ 0: n, 4: 0 }, 'income'); fdef.push(r); });
+    inc.forEach(n => {   // שם בלבד (ברירת מחדל), או {name, balance, budget, note} (העברה מקובץ קודם)
+      const o = typeof n === 'string' ? { name: n } : n, hasB = o.budget != null && o.budget !== '';
+      const r = add({ 0: o.name, 4: o.balance != null ? o.balance : 0, 5: hasB ? o.budget : '', 7: o.note || '' }, 'income'); if (!hasB) fdef.push(r);
+    });
     marks.incT = add({ 0: 'סה"כ הכנסות' }, 'inctotal');
     add({ 3: 'תאריכים:' }, 'datehdr');
     [['fixH', 'fixT', 'הוצאות קבועות', 'קבועה'], ['varH', 'varT', 'הוצאות משתנות', 'שוטפת']].forEach(sc => {
@@ -109,9 +112,10 @@
       let prev = null, band = -1, gr = 0, gi = -1;
       list.forEach(it => {
         const first = it.group !== prev; if (first) { band++; prev = it.group; }
-        const r = add({ 0: first ? it.group : '', 1: it.name, 4: 0, 8: it.key || '', 5: it.budget || '' }, 'item', { band: band, first: first, span: 1 });
+        const hasB = it.budget != null && it.budget !== '';   // 0 הוא תקציב מוגדר. רק "אין ערך" מקבל את ברירת המחדל (=מאזן קיים)
+        const r = add({ 0: first ? it.group : '', 1: it.name, 3: it.score != null ? it.score : '', 4: it.balance != null ? it.balance : 0, 5: hasB ? it.budget : '', 7: it.note || '', 8: it.key || '' }, 'item', { band: band, first: first, span: 1 });
         if (first) { gr = r; gi = meta.length - 1; } else meta[gi].span++;
-        if (!it.budget) fdef.push(r);
+        if (!hasB) fdef.push(r);
         placed.push(Object.assign({}, it, { row: r, grow: gr }));
       });
       marks[sc[1]] = add({ 0: 'סה"כ ' + sc[2] }, 'exptotal');
@@ -433,6 +437,7 @@
     const raw = [   // נכנסים כמו שהם (RAW): שמות סעיפים לא צריכים להתפרש כתאריך או נוסחה
       { range: q(T.ITEMS) + '!A1', values: lay.values }, { range: q(T.LOG) + '!A1', values: [LOG_HEADER] }, { range: q(T.SNAP) + '!A1', values: [SNAP_HEADER] },
       { range: q(T.SET) + '!A1', values: settingsValues(startYm, months, opts.startDay, opts.opening) }, { range: q(T.SET) + '!A7', values: [[NOTE_SET]] }];
+    if (opts.log && opts.log.length) raw.push({ range: q(T.LOG) + '!A2', values: opts.log });   // הוצאות שהועברו מקובץ קודם
     if (opts.prefsJson) raw.push({ range: q(T.SET) + '!E1', values: [['העדפות האפליקציה (לא לערוך)'], [opts.prefsJson]] });
     else raw.push({ range: q(T.SET) + '!E1', values: [['העדפות האפליקציה (לא לערוך)']] });
     return { items: lay.items, meta: lay.meta, marks: lay.marks, layout: 'sheet', startYm: startYm, months: months, sheets: sheets, formulas: formulas, raw: raw, views: { VAR: vv, FIXED: fv }, extras: { sum: sm } };

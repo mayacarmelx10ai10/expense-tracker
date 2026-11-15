@@ -548,7 +548,7 @@
     if (!(startYm % 100 >= 1 && startYm % 100 <= 12)) throw new Error('חודש התחלה לא תקין');
     const prog = (n, t) => { try { o.onProgress && o.onProgress(n, t); } catch (e) { /* התקדמות היא קישוט בלבד */ } };
     prog(8, 'בונה את מבנה הגיליון');
-    const p = W.plan({ items: o.items, startYm: startYm, months: o.months, startDay: o.startDay, opening: o.opening, prefsJson: o.prefsJson });
+    const p = W.plan({ items: o.items, income: o.income, log: o.log, startYm: startYm, months: o.months, startDay: o.startDay, opening: o.opening, prefsJson: o.prefsJson });
     const j = await api('https://sheets.googleapis.com/v4/spreadsheets', { method: 'POST', body: W.createBody(o.title || fileTitle(startYm, o.months), p) });
     const id = j.spreadsheetId, base = sheetUrl(id);
     prog(30, 'כותבת את הקטגוריות והנוסחאות');
@@ -599,6 +599,71 @@
     f.opening = opening;
     return f;
   }
+  /* העברה מקובץ קודם: קוראת את הקובץ הישן (הפורמט הישן או החדש) ויוצרת גיליון חדש עם אותם סעיפים, תקציבים, יתרות, הערות,
+     הוצאות והעדפות. הקובץ הישן לא משתנה. dryRun: רק מחזירה סיכום, בלי ליצור כלום. */
+  async function migrate(o) {
+    o = o || {};
+    if (!o.oldId) throw new Error('חסר קובץ לקריאה');
+    const prev = cfg.sheetId; cfg.sheetId = o.oldId; cache = {};
+    let data;
+    try {
+      const m = await meta(true);
+      if (m[SHEETS.BUDGET] == null && m[SHEETS.ITEMS] == null) throw new Error('זה לא נראה כמו קובץ תקציב של האפליקציה');
+      const hasLog = m[SHEETS.LOG] != null, hasSet = m[SHEETS.SETTINGS] != null;
+      const ranges = [m[SHEETS.ITEMS] != null ? q(SHEETS.ITEMS) + '!A1:I500' : q(SHEETS.BUDGET) + '!A1:L400'];
+      if (hasLog) ranges.push(q(SHEETS.LOG) + '!A1:M20000');
+      if (hasSet) ranges.push(q(SHEETS.SETTINGS) + '!A1:G60');
+      const sumAt = (m[SHEETS.ITEMS] == null && m[SHEETS.SUMMARY] != null) ? ranges.push(q(SHEETS.SUMMARY) + '!A1:Z1') - 1 : -1;
+      const v = await batchVals(ranges), dt = { budget: v[0], log: hasLog ? v[1] : [], set: hasSet ? v[hasLog ? 2 : 1] : [], sum: sumAt >= 0 ? v[sumAt] : [] };
+      data = { v2: m[SHEETS.ITEMS] != null, d: dt };
+      if (!data.v2) {   // בפורמט הישן הוצאות יכולות להיות מוקלדות ישירות בתאי הבקרה: קוראים אותן כדי לא לאבד אותן
+        const mod = await model(); data.mod = mod; data.cells = {};
+        for (const mo of monthOrder(mod)) {
+          const fcN = mod.fixed.cols[mo], vcN = mod.variable.cols[mo]; if (!fcN || !vcN) continue;
+          const fr = mod.fixed.first, vr = mod.variable.first, fc = colLetter(fcN);
+          const [fa, va] = await batchVals([q(SHEETS.FIXED) + '!' + fc + fr + ':' + fc + (fr + mod.fixed.list.length - 1), q(SHEETS.VAR) + '!' + colLetter(vcN[0]) + vr + ':' + colLetter(vcN[vcN.length - 1]) + (vr + mod.variable.list.length - 1)]);
+          data.cells[mo] = { fixed: mod.fixed.list.map((_, i) => num(at(fa[i], 0))), variable: mod.variable.list.map((_, i) => vcN.map((_, w) => num(at(va[i], w)))) };
+        }
+      }
+    } finally { cfg.sheetId = prev; cache = {}; }
+    const d = data.d, num0 = x => (typeof x === 'number' && isFinite(x)) ? Math.round(x * 100) / 100 : 0, score = x => (typeof x === 'number' && x >= 1 && x <= 10) ? x : '';
+    let items = [], income = [];
+    if (data.v2) {
+      const parsed = wb().parseItems(d.budget);
+      parsed.items.forEach(pi => { const k = /^(fixed|var):(\d+)$/.exec(pi.key || ''); items.push({ type: pi.type, group: pi.group, name: pi.name, budget: pi.budget, balance: num0(at(d.budget[pi.row - 1], 4)), score: score(at(d.budget[pi.row - 1], 3)), note: trim(at(d.budget[pi.row - 1], 7)), key: k ? pi.key : '' }); });
+    } else {
+      const bRows = d.budget, sec = (label, end, type, pref) => readSection(bRows, label, end).map(it => ({ type: type, group: it.group, name: it.name, budget: num0(it.row[5]), balance: num0(it.row[4]), score: score(it.row[3]), note: [it.row[6], it.row[7]].filter(x => typeof x === 'string' && trim(x)).map(trim).join(' · '), key: pref + it.n }));
+      items = sec('הוצאות קבועות', 'קבועות', 'קבועה', 'fixed:').concat(sec('הוצאות משתנות', 'משתנות', 'שוטפת', 'var:'));
+      let s = -1; for (let i = 0; i < bRows.length; i++) { const a = trim(at(bRows[i], 0)); if (s < 0 && a === 'הכנסות') { s = i + 1; continue; } if (s >= 0 && a.indexOf('סה"כ') >= 0) { for (let r = s; r < i; r++) { const nm = trim(at(bRows[r], 0)); if (nm) income.push({ name: nm, balance: num0(at(bRows[r], 4)), budget: num0(at(bRows[r], 5)), note: trim(at(bRows[r], 7)) }); } break; } }
+    }
+    const byKey = {}; items.forEach(it => { if (it.key) byKey[it.key] = it; });
+    const log = [], summaryMig = { n: 0 }; let skipped = 0;
+    d.log.slice(1).forEach(r => {
+      const id = trim(at(r, 0)), key = trim(at(r, 11)), amt = Number(at(r, 5));
+      if (!id || !byKey[key] || !(amt > 0)) { if (id) skipped++; return; }
+      log.push([id, at(r, 1), at(r, 2), at(r, 3), at(r, 4), amt, at(r, 6), at(r, 7), at(r, 8), at(r, 9), '', key, at(r, 12)]);
+    });
+    if (data.mod) {   // הפרש בין התא בקובץ הישן לבין מה שמסביר היומן = הוצאה שהוקלדה ידנית. נכנסת ליומן החדש כהוצאה אחת לכל סעיף ושבוע
+      const mod = data.mod, sums = {}; log.forEach(r => { const k = r[11] + '|' + Number(r[8]) + '|' + (Number(r[9]) || 0); sums[k] = (sums[k] || 0) + r[5]; });
+      const dateOf = (mo, w) => { const ym = ymFor(mod, mo), y = Math.floor(ym / 100), d0 = Math.min(28, (mod.startDay || 1) + 7 * w); let mm = mo, yy = y; if (d0 < (mod.startDay || 1)) { /* לא קורה */ } return yy + '-' + String(mm).padStart(2, '0') + '-' + String(d0).padStart(2, '0') + 'T12:00'; };
+      Object.keys(data.cells).forEach(mo => {
+        const c = data.cells[mo], mn = Number(mo);
+        const push = (isVar, n, w, diff) => { const it = byKey[(isVar ? 'var:' : 'fixed:') + n]; if (!it || diff < 0.005) return; log.push(['mig-' + it.key.replace(':', '') + '-' + mn + '-' + w, dateOf(mn, w), isVar ? 'משתנה' : 'קבועה', it.group, it.name, Math.round(diff * 100) / 100, '', 'הועבר מהקובץ הקודם', mn, isVar ? w + 1 : '', '', it.key, '']); summaryMig.n++; };
+        c.fixed.forEach((v, n) => push(false, n, 0, v - (sums['fixed:' + n + '|' + mn + '|0'] || 0)));
+        c.variable.forEach((ws, n) => ws.forEach((v, w) => push(true, n, w, v - (sums['var:' + n + '|' + mn + '|' + (w + 1)] || 0))));
+      });
+    }
+    let prefs = null; { const row = d.set[1]; try { prefs = row && row[4] ? JSON.parse(row[4]) : null; } catch (e) { prefs = null; } }
+    const summary = { income: income.length, fixed: items.filter(i => i.type === 'קבועה').length, variable: items.filter(i => i.type !== 'קבועה').length, withBudget: items.filter(i => i.budget > 0).length, entries: log.length, typed: summaryMig.n, skipped: skipped };
+    if (o.dryRun) return { ok: true, summary: summary };
+    let startDay = Number(o.startDay) || 0;
+    if (!startDay && d.sum && d.sum[0]) { const row = d.sum[0]; for (let i = 0; i < row.length; i++) if (trim(row[i]).indexOf('חישוב חודש החל מיום') >= 0) { for (let j = i + 1; j < row.length; j++) if (typeof row[j] === 'number' && row[j] >= 1 && row[j] <= 28) { startDay = row[j]; break; } break; } }
+    const now = cfg.now(), startYm = Number(o.startYm) || (data.mod ? ymFor(data.mod, monthOrder(data.mod)[0]) : now.getFullYear() * 100 + now.getMonth() + 1);
+    if (prefs) prefs = Object.assign({}, prefs, { ts: now.getTime() });
+    const f = await createFile({ title: o.title, items: items, income: income.length ? income : undefined, log: log, startYm: startYm, months: o.months || 12, startDay: startDay || 1, prefsJson: prefs ? JSON.stringify(prefs) : '', onProgress: o.onProgress });
+    f.summary = summary;
+    return f;
+  }
   async function call(action, p) {
     p = p || {};
     switch (action) {
@@ -611,6 +676,7 @@
       case 'prefsBackup': { await ensureSheet(SHEETS.SETTINGS, SETTINGS_HEADER); const v = await getVals(q(SHEETS.SETTINGS) + '!G2:G2'); let o = null; try { o = v[0] && v[0][0] ? JSON.parse(v[0][0]) : null; } catch (e) { o = null; } return { ok: true, prefs: o }; }
       case 'repair': return repair();
       case 'newYear': return newYear(p);
+      case 'migrate': return migrate(p);
       case 'setBudgetColumn': cache.model = null; { const m0 = await model(); if (m0.v2) throw new Error('בקובץ הזה התקציב נכתב בלשונית "התקציב", בעמודה "תקציב חודשי"'); } return setBudgetColumn(p.col);
       case 'add': cache.carry = null; cache.logSums = null; return add(p.entry);
       case 'update': cache.carry = null; cache.logSums = null; return update(p.entry);
