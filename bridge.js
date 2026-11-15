@@ -540,12 +540,12 @@
     const startYm = Number(o.startYm) || (now.getFullYear() * 100 + now.getMonth() + 1);
     if (!(startYm % 100 >= 1 && startYm % 100 <= 12)) throw new Error('חודש התחלה לא תקין');
     const p = W.plan({ items: o.items, startYm: startYm, months: o.months, startDay: o.startDay, opening: o.opening, prefsJson: o.prefsJson });
-    const j = await api('https://sheets.googleapis.com/v4/spreadsheets', { method: 'POST', body: W.createBody(o.title || 'שיקוף תקציב - הוצאות עם מאיה', p) });
+    const j = await api('https://sheets.googleapis.com/v4/spreadsheets', { method: 'POST', body: W.createBody(o.title || 'שיקוף תקציב - לעבודה עם אפליקציית ״הוצאות עם מאיה״', p) });
     const id = j.spreadsheetId, base = sheetUrl(id);
     await api(base + '/values:batchUpdate', { method: 'POST', body: { valueInputOption: 'USER_ENTERED', data: p.formulas } });
     await api(base + '/values:batchUpdate', { method: 'POST', body: { valueInputOption: 'RAW', data: p.raw } });
     await api(base + ':batchUpdate', { method: 'POST', body: { requests: W.formatRequests(p) } });
-    return { ok: true, id: id, name: (j.properties && j.properties.title) || o.title || 'שיקוף תקציב - הוצאות עם מאיה', url: j.spreadsheetUrl || ('https://docs.google.com/spreadsheets/d/' + id + '/edit'), months: p.months, startYm: startYm };
+    return { ok: true, id: id, name: (j.properties && j.properties.title) || o.title || 'שיקוף תקציב - לעבודה עם אפליקציית ״הוצאות עם מאיה״', url: j.spreadsheetUrl || ('https://docs.google.com/spreadsheets/d/' + id + '/edit'), months: p.months, startYm: startYm };
   }
   const swapIds = (x, map) => { if (Array.isArray(x)) return x.map(v => swapIds(v, map)); if (x && typeof x === 'object') { const o = {}; Object.keys(x).forEach(k => { o[k] = (k === 'sheetId' && map[x[k]] != null) ? map[x[k]] : swapIds(x[k], map); }); return o; } return x; };
   /* תיקון: כותב מחדש את נוסחאות הצפייה, העיצוב וההגנות. לא נוגע בתקציב, ביומן או בהגדרות. */
@@ -583,7 +583,7 @@
     const items = [];
     [['קבועה', mod.fixed.list, 'fixed:'], ['שוטפת', mod.variable.list, 'var:']].forEach(([type, list, pref]) => list.forEach(it => { if (!it.gone) items.push({ type: type, group: it.group, name: it.name, budget: it.budget, key: pref + it.n }); }));
     const pr = o.prefs ? Object.assign({}, o.prefs, { ts: cfg.now().getTime(), decisions: {}, deposits: {} }) : null;
-    const f = await createFile({ title: o.title || 'שיקוף תקציב - הוצאות עם מאיה ' + (startYm % 100 >= 1 ? Math.floor(startYm / 100) : ''), items: items, startYm: startYm, months: 12, startDay: mod.startDay, opening: opening, prefsJson: pr ? JSON.stringify(pr) : '' });
+    const f = await createFile({ title: o.title || 'שיקוף תקציב - לעבודה עם אפליקציית ״הוצאות עם מאיה״ ' + (startYm % 100 >= 1 ? Math.floor(startYm / 100) : ''), items: items, startYm: startYm, months: 12, startDay: mod.startDay, opening: opening, prefsJson: pr ? JSON.stringify(pr) : '' });
     f.opening = opening;
     return f;
   }
