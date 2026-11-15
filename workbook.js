@@ -281,7 +281,7 @@
       } else if (k === 'sechdr') { band('1F3864', true); box(); merge(); fmt(r, r + 1, 3, nc, { horizontalAlignment: 'CENTER', wrapStrategy: 'WRAP' }, 'horizontalAlignment,wrapStrategy'); }
       else if (k === 'total') { band('00B0F0', true); box(); merge(); }
       else if (k === 'inctotal') { band('1B6B35', true); box(); merge(); }
-      else if (k === 'exptotal') { band('D32F2F', true); box(); merge(); }
+      else if (k === 'exptotal') { band('F9ADC3', false); box(); merge(); }
       else if (k === 'bothdr' || k === 'botbal') { band('7F7F7F', true); box(); merge(); }
       else if (k === 'botrow') { fmt(r, r + 1, 0, nc, { textFormat: { fontFamily: 'Arial', fontSize: 12, bold: true } }, 'textFormat'); box(); merge(); }
       else if (k === 'datehdr') { fmt(r, r + 1, 3, 4, { textFormat: { fontFamily: 'Arial', fontSize: 12, bold: true } }, 'textFormat'); }
