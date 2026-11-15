@@ -622,3 +622,17 @@ button:not([disabled]):active,.btn:not([disabled]):active{transform:scale(.96);f
 /* סוף חודש: התגית והמספר בשורה אחת, בלי שבירת שורות */
 .eol .tg{white-space:nowrap;flex:none}
 .eol .cn{white-space:nowrap;flex:none;margin-inline-start:var(--s2)}
+
+/* הגדרות: סדר חדש */
+.fname{font-size:17px;font-weight:700;line-height:1.35;margin:0 0 var(--s3);word-break:break-word}
+.adv summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
+.adv summary::-webkit-details-marker{display:none}
+.adv summary::after{content:"";width:9px;height:9px;border-left:2.5px solid var(--mute);border-bottom:2.5px solid var(--mute);transform:rotate(-45deg);margin-inline-end:4px;transition:transform .15s}
+.adv[open] summary::after{transform:rotate(135deg)}
+.advb{margin-top:var(--s3)}.advb .sp{margin-bottom:var(--s2)}.advb .brow{margin-top:var(--s3)}
+.advh{border:0;border-top:1px solid var(--hair);margin:var(--s4) 0 var(--s3)}
+/* סוף תקופה */
+.endcard{margin:var(--s4);padding:var(--s5) var(--s4);background:var(--sand);border:1px solid var(--line);border-radius:22px}
+.endcard>i{font-size:30px;display:block;margin-bottom:var(--s2)}
+.endcard>b{display:block;font-size:22px;margin-bottom:var(--s2)}
+.endcard p{font-size:15px;line-height:1.5;margin-bottom:var(--s3);color:var(--ink-2)}

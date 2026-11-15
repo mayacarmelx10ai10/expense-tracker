@@ -359,7 +359,7 @@ function newMonthNotice() {
 function banners() {
   let h = newVersionNotice() + newMonthNotice();
   if (!isLive() && DEV) h += `<div class="banner urgent"><i class="ri-link-unlink"></i><span><b>לא מחובר לגיליון</b></span><button class="go" data-act="pick">להתחבר לגיליון</button></div>`;
-  if (S.ended && isLive()) h += `<div class="banner soft"><i class="ri-calendar-event-fill"></i><span><b>תקופת הגיליון הסתיימה</b></span><button class="go" data-act="settings">לפתיחת גיליון חדש</button></div>`;
+  if (S.ended && isLive()) h += `<div class="endcard"><i class="ri-calendar-check-fill"></i><b>תקופת הגיליון הסתיימה</b><p>כל חודשי התקציב בגיליון הזה נגמרו. כדי להמשיך לעקוב אחרי ההוצאות צריך גיליון חדש.</p><p><b>מה יקרה כשתקימי גיליון חדש:</b><br>• ייווצר קובץ חדש בדרייב שלך<br>• הסעיפים והתקציב יועתקו אליו<br>• היתרות יעברו לפי כללי סוף החודש<br>• הגיליון הנוכחי יישאר כמו שהוא, ואפשר לפתוח אותו</p><button class="btn" data-act="newYear">הקמת גיליון חדש</button></div>`;
   if (S.needAuth) h += `<div class="banner urgent"><i class="ri-link-unlink"></i><span><b>לא מחובר לגיליון</b></span><button class="go" data-act="signin">להתחבר לגיליון</button></div>`;
   if (S.pending.length) h += `<div class="banner"><i class="ri-cloud-off-fill"></i><span><b>${S.pending.length} הוצאות ממתינות</b> לסנכרון עם הגיליון.</span><button class="go" data-act="retry">נסי שוב</button></div>`;
   if (S.error) h += `<div class="banner err"><i class="ri-error-warning-fill"></i><span>${esc(S.error)}</span><button class="go" data-act="retry">נסי שוב</button></div>`;
@@ -591,42 +591,69 @@ function eomScreen() {
 function settings() {
   const live = isLive();
   const when = S.lastSync ? new Date(S.lastSync).toLocaleString('he-IL', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+  const c = S.budgetCfg, f2 = c && c.format === 2;
+  const sheetUrl = live ? 'https://docs.google.com/spreadsheets/d/' + S.cfg.sheetId + '/edit' : '';
+  const hasPin = !!PIN.get();
+  const T = t => `<div class="secl">${t}</div>`;
   return `
   <div class="dh"><button class="gb" data-act="back" aria-label="חזרה">${icon('arrow-right-s')}</button></div>
   <div class="dt"><div><b>הגדרות</b></div></div>
 
-  <section class="sc2">
-    <div class="sh2">${icon('links')}<b>חיבור לגיליון</b></div>
-    <div class="status"><span class="dot ${live ? (S.error ? 'bad' : 'ok') : ''}"></span><b>${live ? 'מחובר' : 'לא מחובר'}</b></div>
-    ${live ? `<p class="sp">${esc(S.cfg.sheetName || S.cfg.sheetId)}<br>סנכרון אחרון: ${esc(when)} · החודש מתחיל ביום ${S.startDay}</p>` : ''}
-    ${!Auth.ready() ? '<p class="sp">חסרה הגדרת Google באפליקציה (קובץ config.js).</p>' : `<div class="brow">${live && !Auth.valid() ? '<button class="btn sm" data-act="signin">התחברות מחדש</button>' : ''}<button class="btn sm o" data-act="start">${live ? 'החלפת גיליון' : 'התחברות עם גוגל'}</button><button class="btn sm o" data-act="pasteLink">הדבקת קישור</button>${live ? '<button class="btn sm danger" data-act="disconnect">ניתוק</button>' : ''}</div>`}
-  </section>
-
+  ${live ? T('התקציב') : ''}
   ${live ? `<section class="sc2">
-    <div class="sh2">${icon('user-3')}<b>השם שלי</b></div>
-    <p class="sp">אם כמה אנשים מוסיפים הוצאות באותו גיליון (למשל בני זוג), ליד כל הוצאה יופיע מי הוסיף אותה.</p>
-    <input id="whoName" class="inp" type="text" maxlength="24" placeholder="למשל: מאיה" value="${esc(S.who)}" autocomplete="off">
+    <div class="sh2">${icon('calendar-check')}<b>סוף חודש</b></div>
+    <p class="sp">בסוף כל חודש נשארת יתרה בחלק מהסעיפים. כאן קובעים לכל סעיף מה לעשות איתה: להעביר לחודש הבא, להפריש בצד, או לשאול אותך כל פעם.</p>
+    ${eomSummary()}
+    <button class="btn sm o" data-act="eomScreen">${(() => { const k = eomCounts(); return k.carry + k.aside + k.ask > 0 ? 'עדכון סעיפים' : 'הגדרת הסעיפים'; })()}</button>
   </section>
-
-  <section class="sc2">
-    <div class="sh2">${icon('lock')}<b>נעילה</b></div>
-    <p class="sp">יציאה מהתקציב מסתירה את הנתונים מהמסך, והגיליון נשאר מחובר. הכניסה מחדש ${PIN.get() ? 'דורשת קוד.' : 'היא עם גוגל. מומלץ להגדיר קוד, כי בלעדיו מי שמחזיק במכשיר המחובר לגוגל יכול להיכנס.'}</p>
-    <div class="brow"><button class="btn sm" data-act="lock">יציאה מהתקציב</button><button class="btn sm o" data-act="pinSetup">${PIN.get() ? 'שינוי קוד' : 'הגדרת קוד'}</button>${PIN.get() ? '<button class="btn sm danger" data-act="pinRemove">הסרת קוד</button>' : ''}</div>
-  </section>` : ''}
-
-  ${live ? fileCards() : ''}
 
   <section class="sc2">
     <div class="sh2">${icon('table')}<b>עמודת התקציב</b></div>
     ${budgetBlock()}
   </section>
 
+  ${T('הגיליון שלי')}
   <section class="sc2">
-    <div class="sh2">${icon('calendar-check')}<b>סוף חודש</b></div>
-    <p class="sp">לכל סעיף בוחרים מה קורה עם היתרה שלו בסוף החודש.</p>
-    ${eomSummary()}
-    <button class="btn sm o" data-act="eomScreen">${(() => { const c = eomCounts(); return c.carry + c.aside + c.ask > 0 ? 'עדכון סעיפים' : 'הגדרת הסעיפים'; })()}</button>
+    <div class="sh2">${icon('file-excel-2')}<b>הקובץ בדרייב</b></div>
+    <div class="fname">${esc(S.cfg.sheetName || S.cfg.sheetId)}</div>
+    <div class="status"><span class="dot ${S.error ? 'bad' : 'ok'}"></span><b>${S.error ? 'יש בעיית חיבור' : 'מחובר'}</b></div>
+    <p class="sp">סנכרון אחרון: ${esc(when)} · החודש מתחיל ביום ${S.startDay}</p>
+    <p class="sp">בגיליון כותבים את התקציב ועורכים סעיפים. את ההוצאות מוסיפים מהאפליקציה.</p>
+    <div class="brow">${!Auth.valid() ? '<button class="btn sm" data-act="signin">התחברות מחדש</button>' : ''}<a class="btn sm o" href="${esc(sheetUrl)}" target="_blank" rel="noopener">פתיחת הגיליון</a></div>
   </section>
+  ${f2 ? periodCard(c, sheetUrl) : ''}
+
+  ${T('אני והמכשיר')}
+  <section class="sc2">
+    <div class="sh2">${icon('user-3')}<b>השם שלי בגיליון</b></div>
+    <p class="sp">מומלץ להגדיר שם כשהגיליון משותף לבני זוג. ליד כל הוצאה יופיע מי הוסיף אותה.</p>
+    <input id="whoName" class="inp" type="text" maxlength="24" placeholder="למשל: מאיה" value="${esc(S.who)}" autocomplete="off">
+  </section>
+
+  <section class="sc2">
+    <div class="sh2">${icon('lock')}<b>נעילה וקוד</b></div>
+    <p class="sp"><b>קוד:</b> ${hasPin ? 'מבקשים אותו בכל כניסה לאפליקציה במכשיר הזה.' : 'קוד קצר שמבקשים בכל כניסה לאפליקציה במכשיר הזה. בלעדיו, מי שמחזיק במכשיר המחובר לגוגל יכול להיכנס.'}<br><b>יציאה מהתקציב:</b> נועלת את האפליקציה עכשיו ומסתירה את הנתונים. הגיליון נשאר מחובר, וחוזרים פנימה עם ${hasPin ? 'הקוד' : 'גוגל'}.</p>
+    <div class="brow"><button class="btn sm" data-act="lock">יציאה מהתקציב</button><button class="btn sm o" data-act="pinSetup">${hasPin ? 'שינוי קוד' : 'הגדרת קוד'}</button>${hasPin ? '<button class="btn sm danger" data-act="pinRemove">הסרת קוד</button>' : ''}</div>
+  </section>
+
+  ${T('מתקדם, רק לפעמים')}
+  <details class="sc2 adv">
+    <summary><span class="sh2" style="margin:0">${icon('tools')}<b>החלפה, ניתוק ושחזור</b></span></summary>
+    <div class="advb">
+      <p class="sp"><b>החלפת גיליון:</b> לחיבור לקובץ אחר, למשל אחרי שהתחלת תקופה חדשה או אם יש לך כמה קבצים.</p>
+      <p class="sp"><b>הדבקת קישור:</b> לחיבור לגיליון שכבר חיברת פעם, אם הוא לא נמצא ברשימה.</p>
+      <p class="sp"><b>ניתוק:</b> מנתק את האפליקציה מהגיליון במכשיר הזה. בגיליון עצמו כלום לא נמחק, ואפשר להתחבר אליו שוב.</p>
+      <div class="brow">${Auth.ready() ? `<button class="btn sm o" data-act="start">החלפת גיליון</button><button class="btn sm o" data-act="pasteLink">הדבקת קישור</button><button class="btn sm danger" data-act="disconnect">ניתוק</button>` : ''}</div>
+      ${f2 ? `<hr class="advh"><p class="sp"><b>שחזור לברירת מחדל:</b> מחזיר את הנוסחאות, הלשוניות וההגנות של הגיליון למצב המקורי, אם נמחקו או נהרסו. <b>התקציב וההוצאות לא נמחקים.</b> רק שינויים שעשית ידנית בדפי "קבועות" ו"משתנות" יימחקו.</p><button class="btn sm o" data-act="repair">שחזור לברירת מחדל</button>` : ''}
+    </div>
+  </details>` : `
+  ${T('חיבור')}
+  <section class="sc2">
+    <div class="sh2">${icon('links')}<b>חיבור לגיליון</b></div>
+    <div class="status"><span class="dot"></span><b>לא מחובר</b></div>
+    <p class="sp">מתחברים עם גוגל כדי ליצור גיליון או לפתוח את הגיליון הקיים.</p>
+    ${!Auth.ready() ? '<p class="sp">חסרה הגדרת Google באפליקציה (קובץ config.js).</p>' : '<div class="brow"><button class="btn sm" data-act="start">התחברות עם גוגל</button></div>'}
+  </section>`}
 
   ${!live && DEV ? `<section class="sc2"><div class="sh2">${icon('flask')}<b>הדגמה (פיתוח)</b></div><div class="brow"><button class="btn sm o" data-act="sample">הוצאות לדוגמה</button><button class="btn sm danger" data-act="resetDemo">איפוס</button></div></section>` : ''}
   <div class="foot">גרסה <span class="num">${APP_VERSION}</span></div>
@@ -634,7 +661,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'9.8 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'9.9 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -700,7 +727,10 @@ function budgetBlock() {
   if (!isLive()) return `<p class="sp">אחרי החיבור אפשר לבחור לאיזו עמודה בגיליון להתייחס. שינוי חל רק מהחודש הבא.</p>`;
   const c = S.budgetCfg;
   if (!c) return `<p class="sp">טוען…</p>`;
-  if (c.format === 2) return `<p class="sp">התקציב נכתב בגיליון, בלשונית "התקציב", בעמודה "תקציב חודשי".<br>שינוי חל רק קדימה: החודש הנוכחי והחודשים שעברו נשארים כמו שהיו.</p>`;
+  if (c.format === 2) return `<p class="sp">האפליקציה קוראת את סכום התקציב של כל סעיף מעמודה אחת בלשונית "התקציב" בגיליון. אפשר לבחור מאיזו.</p>
+    <div class="selw"><select id="cfgCol" class="sel">${c.columns.map(x => `<option value="${x.col}" ${x.col === c.current ? 'selected' : ''}>${esc(x.header)} (עמודה ${x.col})</option>`).join('')}</select></div>
+    <p class="sp">שינוי חל מהחודש הבא. החודש הנוכחי והחודשים שעברו נשארים כמו שהיו.</p>
+    <button class="btn sm" data-act="saveCol">שמירה</button>`;
   const sel = c.pending ? c.pending.col : c.current;
   return `<div class="selw"><select id="cfgCol" class="sel">${c.columns.map(x => `<option value="${x.col}" ${x.col === sel ? 'selected' : ''}>${esc(x.header || 'עמודה ' + x.col)} · עמודה ${x.col}</option>`).join('')}</select></div>
     <p class="sp">בשימוש עכשיו: עמודה ${esc(c.current)}.${c.pending ? ` <b>מתוכנן: עמודה ${esc(c.pending.col)} מחודש ${esc(ymLabel(c.pending.from))}.</b>` : ''}<br>שינוי חל רק מחודש ${esc(ymLabel(c.nextYm))}. החודש הנוכחי והחודשים שעברו לא משתנים.</p>
@@ -789,18 +819,11 @@ async function wizCreate() {
 }
 
 
-function fileCards() {
-  const c = S.budgetCfg; if (!c || c.format !== 2) return '';
-  const sheetUrl = 'https://docs.google.com/spreadsheets/d/' + S.cfg.sheetId + '/edit';
+function periodCard(c, sheetUrl) {
   return `<section class="sc2">
     <div class="sh2">${icon('calendar-2')}<b>תקופת התקציב</b></div>
-    <p class="sp">${ymLabel(c.startYm)} ${Math.floor(c.startYm / 100)} עד ${ymLabel(c.endYm)} ${Math.floor(c.endYm / 100)} (${c.months} חודשים).${c.ended ? '<br><b>התקופה הסתיימה.</b> כדי להמשיך פותחים גיליון חדש, והיתרות עוברות אליו.' : ''}</p>
-    <div class="brow"><a class="btn sm o" href="${esc(sheetUrl)}" target="_blank" rel="noopener">פתיחת הגיליון</a><button class="btn sm ${c.ended ? '' : 'o'}" data-act="newYear">${c.ended ? 'פתיחת גיליון חדש' : 'התחלת תקופה חדשה'}</button></div>
-  </section>
-  <section class="sc2">
-    <div class="sh2">${icon('tools')}<b>תיקון הגיליון</b></div>
-    <p class="sp">אם נמחקו בטעות נוסחאות או לשוניות בגיליון, הכפתור משחזר אותן. הנתונים וההוצאות לא נפגעים.</p>
-    <button class="btn sm o" data-act="repair">תיקון הגיליון</button>
+    <p class="sp">${ymLabel(c.startYm)} ${Math.floor(c.startYm / 100)} עד ${ymLabel(c.endYm)} ${Math.floor(c.endYm / 100)} (${c.months} חודשים).</p>
+    ${c.ended ? '<p class="sp"><b>התקופה הסתיימה.</b> כדי להמשיך לעקוב צריך גיליון חדש.</p><button class="btn sm" data-act="newYear">פתיחת גיליון חדש</button>' : '<p class="sp">כשהתקופה תסתיים, האפליקציה תציע לך להקים גיליון חדש.</p>'}
   </section>`;
 }
 
@@ -1019,8 +1042,8 @@ async function act(a, t) {
     case 'wizCreate': wizCreate(); break;
     case 'copyLink': { try { await navigator.clipboard.writeText(k); toast('הקישור הועתק'); } catch (e) { toast('לא הצלחתי להעתיק'); } break; }
     case 'repair': {
-      if (!confirm('לשחזר את הנוסחאות, ההגנות והלשוניות בגיליון?')) break;
-      try { await call('repair'); toast('הגיליון תוקן'); } catch (err) { toast('התיקון לא הצליח: ' + err.message); }
+      if (!confirm('לשחזר את הגיליון לברירת מחדל? התקציב וההוצאות לא נמחקים. שינויים ידניים בדפי קבועות ומשתנות יימחקו.')) break;
+      try { await call('repair'); toast('הגיליון שוחזר'); } catch (err) { toast('השחזור לא הצליח: ' + err.message); }
       break;
     }
     case 'newYear': {
@@ -1065,7 +1088,7 @@ async function act(a, t) {
     case 'pickCat': { const sh = S.sheet; sh.key = k; sh.tags = []; renderSheet(); break; }
     case 'saveCol': {
       const col = $('#cfgCol') && $('#cfgCol').value; if (!col) return;
-      try { const r = await call('setBudgetColumn', { col }); toast('עמודה ' + col + ' תחול מחודש ' + ymLabel(r.from)); S.budgetCfg = await call('settings'); render(); }
+      try { const r = await call('setBudgetColumn', { col }); toast(r.from ? 'עמודה ' + col + ' תחול מחודש ' + ymLabel(r.from) : 'נשמר. השינוי חל מהחודש הבא'); S.budgetCfg = await call('settings'); render(); }
       catch (err) { toast(err.message); }
       break;
     }

@@ -171,6 +171,9 @@
     const months = Math.max(1, Math.min(12, Number(setting('months')) || 12));
     const startDay = Math.max(1, Math.min(28, Number(setting('startDay')) || 1));
     const parsed = wb().parseItems(v[0]), lists = { fixed: [], variable: [] }, keyed = [];
+    const bcol = trim(setting('budgetCol') || 'F').toUpperCase();   // העמודה שממנה נקרא התקציב (ברירת מחדל F "תקציב חדש")
+    if (parsed.layout === 'sheet' && /^[D-G]$/.test(bcol) && bcol !== 'F') parsed.items.forEach(pi => { pi.budget = num((v[0][pi.row - 1] || [])[colIndex(bcol) - 1]); });
+    cache.budgetCol = /^[D-G]$/.test(bcol) ? bcol : 'F';
     let nextN = { fixed: 0, variable: 0 }, missing = [];
     parsed.items.forEach(pi => {
       const isVar = pi.type === 'שוטפת';
@@ -307,7 +310,7 @@
     const mod = await model();
     if (mod.v2) {
       const cy = curYm(mod), ord = monthOrder(mod), endYm = ymFor(mod, ord[ord.length - 1]);
-      return { ok: true, format: 2, current: 'D', pending: null, currentYm: cy, nextYm: nextYm(cy), columns: [], startYm: mod.startYm, months: mod.months, endYm: endYm, ended: cy > endYm };
+      return { ok: true, format: 2, current: cache.budgetCol || 'F', columns: [{ col: 'E', header: 'מאזן קיים' }, { col: 'F', header: 'תקציב חדש' }], pending: null, currentYm: cy, nextYm: nextYm(cy), columns: [], startYm: mod.startYm, months: mod.months, endYm: endYm, ended: cy > endYm };
     }
     const hist = await colHistory(), cy = curYm(mod);
     const pending = hist.filter(h => h.from > cy)[0] || null;
@@ -321,6 +324,17 @@
     return { ok: true, current: colFor(hist, cy), pending: pending, currentYm: cy, nextYm: nextYm(cy), columns: cols };
   }
 
+  /* בקובץ החדש: בוחרים אם התקציב נקרא מ"תקציב חדש" (F) או מ"מאזן קיים" (E). החודש הנוכחי נשאר כמו שהיה, והשינוי חל מהחודש הבא */
+  async function setBudgetColumn2(col) {
+    col = trim(col).toUpperCase();
+    if (col !== 'E' && col !== 'F') throw new Error('עמודה לא תקינה');
+    await ensureSheet(SHEETS.SETTINGS, SETTINGS_HEADER);
+    const rows = await getVals(q(SHEETS.SETTINGS) + '!A2:C60');
+    const i = rows.findIndex(r => trim(r[0]) === 'budgetCol');
+    if (i >= 0) await putVals(q(SHEETS.SETTINGS) + '!B' + (i + 2), [[col]], 'RAW'); else await appendVals(SHEETS.SETTINGS, [['budgetCol', col, '']]);
+    cache.model = null; cache.modelAt = 0;
+    return { ok: true, col: col };
+  }
   async function setBudgetColumn(col) {
     col = trim(col).toUpperCase();
     if (!/^[A-L]$/.test(col) || colIndex(col) < 3) throw new Error('עמודה לא תקינה');
@@ -686,7 +700,7 @@
       case 'repair': return repair();
       case 'newYear': return newYear(p);
       case 'migrate': return migrate(p);
-      case 'setBudgetColumn': cache.model = null; { const m0 = await model(); if (m0.v2) throw new Error('בקובץ הזה התקציב נכתב בלשונית "התקציב", בעמודה "תקציב חודשי"'); } return setBudgetColumn(p.col);
+      case 'setBudgetColumn': cache.model = null; { const m0 = await model(); if (m0.v2) return setBudgetColumn2(p.col); } return setBudgetColumn(p.col);
       case 'add': cache.carry = null; cache.logSums = null; return add(p.entry);
       case 'update': cache.carry = null; cache.logSums = null; return update(p.entry);
       case 'delete': cache.carry = null; cache.logSums = null; return del(p.id);
