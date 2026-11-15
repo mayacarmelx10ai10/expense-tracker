@@ -539,11 +539,16 @@
     const W = wb(), now = cfg.now();
     const startYm = Number(o.startYm) || (now.getFullYear() * 100 + now.getMonth() + 1);
     if (!(startYm % 100 >= 1 && startYm % 100 <= 12)) throw new Error('חודש התחלה לא תקין');
+    const prog = (n, t) => { try { o.onProgress && o.onProgress(n, t); } catch (e) { /* התקדמות היא קישוט בלבד */ } };
+    prog(8, 'בונה את מבנה הגיליון');
     const p = W.plan({ items: o.items, startYm: startYm, months: o.months, startDay: o.startDay, opening: o.opening, prefsJson: o.prefsJson });
     const j = await api('https://sheets.googleapis.com/v4/spreadsheets', { method: 'POST', body: W.createBody(o.title || 'שיקוף תקציב - לעבודה עם אפליקציית ״הוצאות עם מאיה״', p) });
     const id = j.spreadsheetId, base = sheetUrl(id);
+    prog(30, 'כותבת את הקטגוריות והנוסחאות');
     await api(base + '/values:batchUpdate', { method: 'POST', body: { valueInputOption: 'USER_ENTERED', data: p.formulas } });
+    prog(55, 'שומרת הגדרות');
     await api(base + '/values:batchUpdate', { method: 'POST', body: { valueInputOption: 'RAW', data: p.raw } });
+    prog(68, 'מעצבת ומוסיפה הגנות');
     await api(base + ':batchUpdate', { method: 'POST', body: { requests: W.formatRequests(p) } });
     return { ok: true, id: id, name: (j.properties && j.properties.title) || o.title || 'שיקוף תקציב - לעבודה עם אפליקציית ״הוצאות עם מאיה״', url: j.spreadsheetUrl || ('https://docs.google.com/spreadsheets/d/' + id + '/edit'), months: p.months, startYm: startYm };
   }

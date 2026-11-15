@@ -516,3 +516,15 @@ body{touch-action:manipulation}
 .guide b:first-child{display:block;font-size:17px;margin-bottom:var(--s3)}
 .guide ol{margin:0 0 var(--s4);padding:0 var(--s5) 0 0;color:var(--ink-2)}
 .guide li{margin-bottom:var(--s2)}
+
+/* אשף יצירת הגיליון: טקסט משני קטן, מרווח לפני "חזרה", והתקדמות */
+.wiz .sp.small{font-size:12px;line-height:1.5}
+.wiz .wback{margin-top:var(--s7,32px)}
+.wiz .prog{margin-top:var(--s5);text-align:center}
+.wiz .pmsg{font-size:15px;font-weight:600;margin-bottom:var(--s3)}
+.wiz .pbar{height:10px;border-radius:999px;background:var(--hair);overflow:hidden}
+.wiz .pbar i{display:block;height:100%;border-radius:999px;background:var(--ink);transition:width .5s ease;position:relative;overflow:hidden}
+.wiz .pbar i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);transform:translateX(100%);animation:pshine 1.4s linear infinite}
+@keyframes pshine{to{transform:translateX(-100%)}}
+.wiz .ppct{font-size:13px;color:var(--mute);margin-top:6px}
+.wiz .psub{font-size:12px;color:var(--mute);margin-top:var(--s3)}

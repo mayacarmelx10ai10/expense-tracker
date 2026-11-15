@@ -608,7 +608,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'7.8 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'7.9 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -694,24 +694,30 @@ function wizard() {
     <div class="selw"><select id="wizStart" class="sel">${yms.map(y => `<option value="${y}" ${y === w.startYm ? 'selected' : ''}>${MONTHS[(y % 100) - 1]} ${Math.floor(y / 100)}${y === cur ? ' (החודש)' : ''}</option>`).join('')}</select></div>
     <label class="lab">לכמה חודשים?</label>
     <div class="selw"><select id="wizMonths" class="sel">${[12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(m => `<option value="${m}" ${m === w.months ? 'selected' : ''}>${m} חודשים</option>`).join('')}</select></div>
-    <p class="sp">בסוף התקופה האפליקציה תציע ליצור גיליון חדש ולהעביר אליו את היתרות.</p>
+    <p class="sp small">בסוף התקופה האפליקציה תציע ליצור גיליון חדש ולהעביר אליו את היתרות.</p>
     ${S.error ? `<div class="hint" style="color:var(--pt)">${esc(S.error)}</div>` : ''}
-    <button class="btn big" data-act="wizCreate" ${w.busy ? 'disabled' : ''}>${w.busy ? 'יוצרת את הגיליון…' : 'יצירת הגיליון'}</button>
-    <button class="lnk" data-act="wizCancel" style="margin-top:var(--s3)">חזרה</button>
+    ${w.busy ? `<div class="prog" id="wizProg"><div class="pmsg" id="wizMsg">${esc(w.msg || 'מתחילה…')}</div><div class="pbar"><i id="wizBar" style="width:${w.pct || 0}%"></i></div><div class="ppct num" id="wizPct">${Math.round(w.pct || 0)}%</div><div class="psub">זה לוקח כחצי דקה. אפשר להשאיר את המסך פתוח.</div></div>`
+    : `<button class="btn big" data-act="wizCreate">יצירת הגיליון</button>
+    <button class="lnk wback" data-act="wizCancel">חזרה</button>`}
   <div class="foot">גרסה <span class="num">${APP_VERSION}</span></div></div>`;
 }
 async function wizCreate() {
   const w = S.wiz; if (w.busy) return;
   try { await Auth.signIn(); } catch (e) { toast('ההתחברות לא הושלמה'); return; }
-  w.busy = true; S.error = null; render();
+  w.busy = true; w.pct = 3; w.msg = 'מתחילה…'; S.error = null; render();
+  let cap = 3;   // האחוז עולה לאט בין שלבים, כדי שהפס לא ייראה תקוע בשלב ארוך
+  const paint = () => { const bar = document.getElementById('wizBar'); if (!bar) return; bar.style.width = w.pct + '%'; const m = document.getElementById('wizMsg'), p = document.getElementById('wizPct'); if (m) m.textContent = w.msg; if (p) p.textContent = Math.round(w.pct) + '%'; };
+  const creep = setInterval(() => { if (w.pct < cap - 1) { w.pct += (cap - w.pct) * 0.08; paint(); } }, 400);
   try {
     Bridge.configure({ sheetId: '', getToken: () => Auth.token() });
-    const r = await Bridge.createFile({ title: 'שיקוף תקציב - לעבודה עם אפליקציית ״הוצאות עם מאיה״', startYm: w.startYm, months: w.months });
+    const r = await Bridge.createFile({ title: 'שיקוף תקציב - לעבודה עם אפליקציית ״הוצאות עם מאיה״', startYm: w.startYm, months: w.months,
+      onProgress: (pct, msg) => { w.pct = Math.max(w.pct, pct); cap = Math.min(99, pct + 22); w.msg = msg; paint(); } });
+    w.pct = 100; w.msg = 'הגיליון מוכן'; paint(); clearInterval(creep); await new Promise(res => setTimeout(res, 500));
     S.cfg = { sheetId: r.id, sheetName: r.name }; LS.set('cfg', S.cfg); setupBridge();
     S.wiz = null; S.needAuth = false; S.budgetCfg = null; S.error = null; S.newFileUrl = r.url;
     await connectFlow(); flush();
     toast('הגיליון נוצר. אפשר לכתוב בו את התקציב');
-  } catch (err) { w.busy = false; S.error = 'לא הצלחתי ליצור את הגיליון: ' + (err.message || err); render(); }
+  } catch (err) { clearInterval(creep); w.busy = false; S.error = 'לא הצלחתי ליצור את הגיליון: ' + (err.message || err); render(); }
 }
 
 
