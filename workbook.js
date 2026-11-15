@@ -24,22 +24,22 @@
   /* קטלוג סעיפים: אותם סעיפים ואותו סדר כמו בקובץ המקורי, בלי שמות אישיים (הוחלפו ב"שונות") */
   const X = (n, c) => new Array(c).fill(n);
   const CATALOG = {
-    income: ['הכנסה מעבודה', 'דמי אבטלה', 'הכנסה מדיבידנד', 'שונות', 'שכירות', 'קצבת ילדים'],
+    income: ['הכנסה מעבודה', 'הכנסה מעבודה', 'הכנסה מקצבה', 'עזרה מהורים', 'הכנסה אחרת', 'קצבת ילדים'],
     fixed: [
-      ['הוצאות בית', ['שכר דירה', 'גז', 'חשמל', 'מים', 'ארנונה', 'אזעקה', 'עוזרת בית', 'גנן', 'ביטוח בית', 'תיקונים בית', 'פיצויים עוזרת בית', 'אחר']],
-      ['תקשורת', ['טלפון', 'apple music', 'אינטרנט', 'כבלים/ טלויזיה בלווין', 'דיסני+', 'אחסון בענן וגיבויים']],
-      ['חינוך', ['מעון', 'חוגים/ שיעורי עזר', 'גן', 'פסיכולוג/ הוראה מתקנת', 'ביה"ס', 'קורסים (מבוגרים)', 'תשלומי הורים', 'אחר']],
-      ['תחבורה', ['ביטוח רכב - מקיף + חובה', 'כביש 6 + חניות', 'רכב טיפולים ורישוי', 'מצלמת רכב', 'איתורן']],
-      ['בריאות', ['קופת חולים', 'ביטוח רפואי', 'ביטוח חיים', 'שונות', 'שונות', 'שונות', 'אחר']],
-      ['בנקים ואשראי', ['הלוואות', 'ריבית על המינוס', 'עמלות בנק + כ״א', 'חסכונות ילדים'].concat(X('אחר', 3))],
-      ['שונות', ['חופשות', 'שונות', 'תרומה'].concat(X('שונות', 8), ['מעשר', 'קרן חרום', 'בלת"ם (הוצאות לא מתוכננות)'])]],
+      ['הוצאות בית', ['שכר דירה', 'גז', 'חשמל', 'מים', 'עגכע', 'ועד בית', 'משכנתא - כולל ביטוח', 'עוזרת בית', 'עיתונים', 'בר מים', 'אחר', 'אחר']],
+      ['תקשורת', ['טלפון', 'טלפון נייד', 'אינטרנט', 'כבלים/ טלויזיה בלווין', 'שונות', 'אחר']],
+      ['חינוך', ['מעון', 'חוגים/ שיעורי עזר', 'גן', 'פסיכולוג/ הוראה מתקנת', 'ביה"ס', 'אחר', 'אחר', 'אחר']],
+      ['תחבורה', ['ביטוח רכב', 'כביש 6 + חניות', 'רכב טיפולים ורישוי', 'אחר', 'אחר']],
+      ['בריאות', ['קופ"ח ביטוח בריאות משלים', 'ביטוח חיים ריסק+ מחלות', 'ביטוח סיעודי פרטי', 'ביטוח רפואי פרטי', 'אחר', 'אחר', 'אחר']],
+      ['בנקים ואשראי', ['הלוואות', 'ריבית על המינוס', 'עמלות בנק', 'חסכונות', 'אחר', 'אחר', 'אחר']],
+      ['שונות', ['נסיעות וחופשות', 'יעד אחר ראוי'].concat(X('שונות', 9), ['מעשר', 'קרן חרום', 'בלת"ם (הוצאות לא מתוכננות)'])]],
     variable: [
-      ['קניות', ['סופר', 'אוכל מהיר', 'סופר פארם', 'ביגוד'].concat(X('אחר', 4))],
+      ['קניות', ['אוכל ומוצרי מכולת', 'סיגריות', 'הוצאות תינוקות', 'ביגוד והנעלה', 'אחר', 'אחר', 'אחר', 'אחר']],
       ['טיפוח ורפואה', ['קוסמטיקה טיפולים ומוצרים', 'מספרה', 'הוצאות רפואיות', 'טיפולי שיניים', 'אחר', 'אחר']],
       ['תחבורה', ['דלק', 'אחזקת רכב', 'חניונים - פנגו', 'אחר', 'אחר']],
       ['בית', ['מוצרים ורהיטים לבית', 'ספרים דיסקים', 'חיות מחמד', 'אחזקת הבית']],
-      ['בילויים', ['בילויים', 'מסעדות', 'מתנות לילדים + חגים', 'מתנות לאירועים', 'צעצועים', 'אחר', 'ויזה תשלומים']],
-      ['שונות', ['כיסוי מינוס', 'מזומן שונות', 'שונות', 'שונות', 'על עצמי', 'שונות', 'שונות', 'שונות']]]
+      ['בילויים', ['בילויים', 'מסעדות', 'מתנות לבני משפחה', 'דמי כיס', 'צעצועים', 'מתנות לאירועים', 'ויזה תשלומים']],
+      ['שונות', ['כיסוי מינוס', 'מזומן שונות'].concat(X('שונות', 6))]]
   };
   function sampleItems() {
     const out = []; let nf = 0, nv = 0;
@@ -85,14 +85,14 @@
       if (a === 'סה"כ יתרה') { marks.botBal = row; return; }
       if ((sec === 'fixed' || sec === 'var') && b) {
         if (a) { group = a; grow = row; }
-        items.push({ type: sec === 'fixed' ? 'קבועה' : 'שוטפת', group: group, name: b, budget: numv(r[5]), key: String(r[2] || ''), row: row, grow: grow || row });
+        items.push({ type: sec === 'fixed' ? 'קבועה' : 'שוטפת', group: group, name: b, budget: numv(r[5]), key: String(r[8] || ''), row: row, grow: grow || row });
       }
     });
     return { layout: 'sheet', items: items, marks: marks };
   }
   function buildItemsLayout(items, income) {
     const rows = [], meta = [], marks = {}, placed = [], fdef = [];
-    const add = (cells, kind, extra) => { const r = ['', '', '', '', '', '', '', '']; Object.keys(cells).forEach(k => { r[k] = cells[k]; }); rows.push(r); meta.push(Object.assign({ row: rows.length, kind: kind }, extra || {})); return rows.length; };
+    const add = (cells, kind, extra) => { const r = ['', '', '', '', '', '', '', '', '']; Object.keys(cells).forEach(k => { r[k] = cells[k]; }); rows.push(r); meta.push(Object.assign({ row: rows.length, kind: kind }, extra || {})); return rows.length; };
     // rows[i] היא שורה i+1 בגיליון. השורות זהות לקובץ המקורי (שורה 1 ריקה)
     add({}, 'blank');
     marks.top = add({ 0: 'סה"כ יתרת הכנסות בניכוי הוצאות:', 7: 'הערות' }, 'top');
@@ -100,7 +100,7 @@
     add({ 4: 'למלא כאן' }, 'fillhint');
     marks.incH = add({ 0: 'הכנסות', 4: 'מאזן קיים', 5: 'תקציב חדש' }, 'sechdr');
     const inc = income && income.length ? income : CATALOG.income;
-    inc.forEach(n => { const r = add({ 0: n }, 'income'); fdef.push(r); });
+    inc.forEach(n => { const r = add({ 0: n, 4: 0 }, 'income'); fdef.push(r); });
     marks.incT = add({ 0: 'סה"כ הכנסות' }, 'inctotal');
     add({ 3: 'תאריכים:' }, 'datehdr');
     [['fixH', 'fixT', 'הוצאות קבועות', 'קבועה'], ['varH', 'varT', 'הוצאות משתנות', 'שוטפת']].forEach(sc => {
@@ -109,7 +109,7 @@
       let prev = null, band = -1, gr = 0, gi = -1;
       list.forEach(it => {
         const first = it.group !== prev; if (first) { band++; prev = it.group; }
-        const r = add({ 0: first ? it.group : '', 1: it.name, 2: it.key || '', 5: it.budget || '' }, 'item', { band: band, first: first, span: 1 });
+        const r = add({ 0: first ? it.group : '', 1: it.name, 4: 0, 8: it.key || '', 5: it.budget || '' }, 'item', { band: band, first: first, span: 1 });
         if (first) { gr = r; gi = meta.length - 1; } else meta[gi].span++;
         if (!it.budget) fdef.push(r);
         placed.push(Object.assign({}, it, { row: r, grow: gr }));
@@ -143,7 +143,7 @@
    * ואז לכל חודש: בפועל ויתרה מצטברת (בקבועות), או חמישה שבועות ויתרה מצטברת (במשתנות).
    * היתרה כאן פשוטה: יתרה קודמת + תקציב החודש פחות מה שהוצא. כללי סוף החודש (גלגול/הפקדה/שאלה) נקבעים באפליקציה. */
   function viewValues(items, isVar, startYm, count, layout) {
-    const RF = layout === 'flat' ? { g: 'B', n: 'C', b: 'D', k: 'E', grow: false } : { g: 'A', n: 'B', b: 'F', k: 'C', grow: true };
+    const RF = layout === 'flat' ? { g: 'B', n: 'C', b: 'D', k: 'E', grow: false } : { g: 'A', n: 'B', b: 'F', k: 'I', grow: true };
     const rows = [];   // br = השורה של הסעיף בלשונית "התקציב" (it.row אם ידועה, אחרת לפי הסדר)
     items.forEach((it, i) => { if ((it.type !== 'קבועה') === isVar) rows.push({ it: it, br: it.row || i + 2 }); });
     const pre = isVar ? 4 : 3, per = isVar ? 6 : 2, months = monthList(startYm, count), width = pre + per * count, first = 5;
@@ -255,10 +255,10 @@
   /* הגנות ועיצוב כללי של הלשוניות. marks = שורות הסכומים בלשונית התקציב (נחשבות מהגיליון בתיקון). layout 'flat' = הפריסה הראשונה (בלי עיצוב מיוחד). */
   function staticFormat(items, layout, marks) {
     const itemsPart = layout === 'flat' ? [] : [
-      width(ID.ITEMS, 0, 1, 130), width(ID.ITEMS, 1, 2, 250), width(ID.ITEMS, 2, 3, 70), width(ID.ITEMS, 3, 4, 110), width(ID.ITEMS, 4, 5, 185), width(ID.ITEMS, 5, 6, 235), width(ID.ITEMS, 6, 7, 40), width(ID.ITEMS, 7, 8, 320),
-      { updateDimensionProperties: { range: { sheetId: ID.ITEMS, dimension: 'COLUMNS', startIndex: 2, endIndex: 3 }, properties: { hiddenByUser: true }, fields: 'hiddenByUser' } },
+      width(ID.ITEMS, 0, 1, 130), width(ID.ITEMS, 1, 2, 250), width(ID.ITEMS, 2, 3, 30), width(ID.ITEMS, 3, 4, 110), width(ID.ITEMS, 4, 5, 185), width(ID.ITEMS, 5, 6, 235), width(ID.ITEMS, 6, 7, 40), width(ID.ITEMS, 7, 8, 320),
+      { updateDimensionProperties: { range: { sheetId: ID.ITEMS, dimension: 'COLUMNS', startIndex: 8, endIndex: 9 }, properties: { hiddenByUser: true }, fields: 'hiddenByUser' } },
       { updateSheetProperties: { properties: { sheetId: ID.ITEMS, gridProperties: { frozenRowCount: 5 } }, fields: 'gridProperties.frozenRowCount' } },
-      protect(ID.ITEMS, 'עמודת המפתחות מחברת סעיף להוצאות. אל תמחקי', { range: { sheetId: ID.ITEMS, startRowIndex: 0, endRowIndex: 500, startColumnIndex: 2, endColumnIndex: 3 } })
+      protect(ID.ITEMS, 'עמודת המפתחות מחברת סעיף להוצאות. אל תמחקי', { range: { sheetId: ID.ITEMS, startRowIndex: 0, endRowIndex: 500, startColumnIndex: 8, endColumnIndex: 9 } })
     ].concat(Object.keys(marks || {}).filter(k => ['top', 'incT', 'fixT', 'varT', 'botInc', 'botExp', 'botBal'].includes(k)).map(k =>
       protect(ID.ITEMS, 'סכומים (נוסחאות)', { range: { sheetId: ID.ITEMS, startRowIndex: marks[k] - 1, endRowIndex: marks[k], startColumnIndex: 4, endColumnIndex: 6 } })));
     return itemsPart.concat([

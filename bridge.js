@@ -182,7 +182,7 @@
     keyed.forEach(it => { const list = lists[it.isVar ? 'variable' : 'fixed']; list[it.n] = { n: it.n, group: it.group, name: it.name, budget: it.budget, row: it.row }; });
     ['fixed', 'variable'].forEach(t => { for (let n = 0; n < lists[t].length; n++) if (!lists[t][n]) lists[t][n] = { n: n, group: '', name: '', budget: 0, row: 0, gone: true }; });
     if (missing.length) {   // סעיף חדש שנוסף ישירות בגיליון מקבל מפתח קבוע
-      const kc = parsed.layout === 'flat' ? 'E' : 'C';
+      const kc = parsed.layout === 'flat' ? 'E' : 'I';
       await Promise.all(missing.map(it => putVals(q(SHEETS.ITEMS) + '!' + kc + it.row, [[(it.isVar ? 'var:' : 'fixed:') + it.n]], 'RAW')));
     }
     const first = Math.floor(startYm / 100) * 100 + (startYm % 100);
