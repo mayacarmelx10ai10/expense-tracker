@@ -373,7 +373,7 @@ function catsHtml() {
   const list = isVar ? S.data.variable : S.data.fixed;
   if (S.loading && !list.length) return loadingHtml();
   const groups = sortedGroups(list, S.tab);
-  return groups.length ? groups.map(g => groupHtml(g, isVar, '')).join('') : '<div class="empty">אין שורות עם תקציב בעמודה F.<br>ממלאים סכומים בגיליון, והן יופיעו כאן.</div>';
+  return groups.length ? groups.map(g => groupHtml(g, isVar, '')).join('') : (S.fmt === 2 ? emptyGuide() : '<div class="empty">אין שורות עם תקציב בעמודה F.<br>ממלאים סכומים בגיליון, והן יופיעו כאן.</div>');
 }
 function renderCats() {
   const el = $('#cats'); if (!el) return;
@@ -608,7 +608,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'6.6 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'6.7 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -750,6 +750,14 @@ function filesScreen() {
     ${S.files.map(f => `<button class="btn o" data-act="useFile" data-k="${esc(f.id)}" style="margin-bottom:var(--s3)">${esc(f.name)}</button>`).join('')}
     <button class="btn" data-act="wizStart">יצירת גיליון חדש</button>
     <button class="lnk" data-act="filesBack" style="margin-top:var(--s3)">חזרה</button></div>`;
+}
+
+/* גיליון חדש בלי תקציב: מסבירים מה עושים */
+function emptyGuide() {
+  const url = 'https://docs.google.com/spreadsheets/d/' + S.cfg.sheetId + '/edit';
+  return `<div class="empty guide"><b>עוד לא הגדרת תקציב</b>
+    <ol><li>פתחי את הגיליון בלחיצה על הכפתור.</li><li>בלשונית <b>"התקציב"</b>, בעמודה <b>"תקציב חודשי"</b>, כתבי סכום ליד כל סעיף. אפשר לשנות שמות, למחוק סעיפים שלא צריך ולהוסיף שורות בסוף הרשימה.</li><li>חזרי לאפליקציה ומשכי למטה לרענון. הסעיפים עם תקציב יופיעו כאן.</li></ol>
+    <a class="btn sm" href="${esc(url)}" target="_blank" rel="noopener">פתיחת הגיליון</a></div>`;
 }
 
 const SHEETS_ICON = '<svg viewBox="0 0 40 52" width="56" height="72" aria-hidden="true"><path d="M4 0h20l16 16v32a4 4 0 0 1-4 4H4a4 4 0 0 1-4-4V4a4 4 0 0 1 4-4z" fill="#23A566"/><path d="M24 0l16 16H28a4 4 0 0 1-4-4z" fill="#188038"/><rect x="9" y="25" width="22" height="16" rx="1.5" fill="#fff"/><path d="M9 30.5h22M9 35.5h22M17.5 25v16" stroke="#23A566" stroke-width="1.6" fill="none"/></svg>';

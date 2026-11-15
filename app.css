@@ -511,3 +511,8 @@ body{touch-action:manipulation}
 .wiz .sp{margin:var(--s4) 0 0;color:var(--mute)}
 .wiz .hint{text-align:right;margin:var(--s5) 0 var(--s4)}
 .wiz .btn.big{margin-top:var(--s3)}
+
+.guide{text-align:right;padding:var(--s5) var(--s4);line-height:1.6}
+.guide b:first-child{display:block;font-size:17px;margin-bottom:var(--s3)}
+.guide ol{margin:0 0 var(--s4);padding:0 var(--s5) 0 0;color:var(--ink-2)}
+.guide li{margin-bottom:var(--s2)}
