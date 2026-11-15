@@ -541,6 +541,14 @@
     const lab = t => HEB_MONTHS[t % 12] + ' ' + Math.floor(t / 12);
     return 'שיקוף תקציב - לעבודה עם אפליקציית ״הוצאות עם מאיה״ - ' + (n === 1 ? lab(s0) : lab(s0) + ' עד ' + lab(e0));
   }
+  /* אין שני קבצים באותו שם: אם השם כבר קיים בדרייב מוסיפים (גרסה 2), (גרסה 3) וכו' */
+  async function uniqueTitle(base) {
+    let names = [];
+    try { names = (await listFiles()).map(f => f.name); } catch (e) { return base; }
+    if (names.indexOf(base) < 0) return base;
+    let n = 2; while (names.indexOf(base + ' (גרסה ' + n + ')') >= 0) n++;
+    return base + ' (גרסה ' + n + ')';
+  }
   async function createFile(o) {
     o = o || {};
     const W = wb(), now = cfg.now();
@@ -549,7 +557,7 @@
     const prog = (n, t) => { try { o.onProgress && o.onProgress(n, t); } catch (e) { /* התקדמות היא קישוט בלבד */ } };
     prog(8, 'יוצרת את הגיליון בדרייב');
     const p = W.plan({ items: o.items, income: o.income, log: o.log, startYm: startYm, months: o.months, startDay: o.startDay, opening: o.opening, prefsJson: o.prefsJson });
-    const j = await api('https://sheets.googleapis.com/v4/spreadsheets', { method: 'POST', body: W.createBody(o.title || fileTitle(startYm, o.months), p) });
+    const j = await api('https://sheets.googleapis.com/v4/spreadsheets', { method: 'POST', body: W.createBody(await uniqueTitle(o.title || fileTitle(startYm, o.months)), p) });
     const id = j.spreadsheetId, base = sheetUrl(id);
     prog(30, 'יוצרת את דפי ההוצאות הקבועות והמשתנות');
     await api(base + '/values:batchUpdate', { method: 'POST', body: { valueInputOption: 'USER_ENTERED', data: p.formulas } });
@@ -688,7 +696,7 @@
 
   /* הגיליונות שהאפליקציה יצרה או שנבחרו בה (הרשאת drive.file מחזירה רק אותם), לחיפוש אוטומטי בכניסה ממכשיר חדש */
   async function listFiles() {
-    const j = await api('https://www.googleapis.com/drive/v3/files', { params: { q: "mimeType='application/vnd.google-apps.spreadsheet' and trashed=false", fields: 'files(id,name,modifiedTime)', orderBy: 'modifiedTime desc', pageSize: 20 } });
+    const j = await api('https://www.googleapis.com/drive/v3/files', { params: { q: "mimeType='application/vnd.google-apps.spreadsheet' and trashed=false", fields: 'files(id,name,modifiedTime)', orderBy: 'modifiedTime desc', pageSize: 100 } });
     return j.files || [];
   }
   const Bridge = { configure: configure, call: call, createFile: createFile, listFiles: listFiles, _internals: { model: () => model(), calls: () => apiCalls, colIndex: colIndex, colLetter: colLetter, SHEETS: SHEETS } };
