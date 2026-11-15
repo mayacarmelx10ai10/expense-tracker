@@ -610,7 +610,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'8.8 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'8.9 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -716,7 +716,7 @@ function wizard() {
     ${S.error ? `<div class="hint" style="color:var(--pt)">${esc(S.error)}</div>` : ''}
     ${w.busy ? `<div class="prog" id="wizProg"><div class="pmsg" id="wizMsg">${esc(w.msg || 'מתחילה…')}</div><div class="pbar"><i id="wizBar" style="width:${w.pct || 0}%"></i></div><div class="ppct num" id="wizPct">${Math.round(w.pct || 0)}%</div><div class="psub">זה לוקח כחצי דקה. אפשר להשאיר את המסך פתוח.</div></div>`
     : `<button class="btn big" data-act="wizCreate">יצירת הגיליון</button>
-    <button class="lnk" data-act="migPick" style="margin-top:var(--s4)">יש לי כבר קובץ תקציב. להעביר ממנו</button>
+    <button class="lnk" data-act="migPick" style="margin-top:var(--s4)">יש לי תקציב קיים לייבוא</button>
     <button class="lnk wback" data-act="wizCancel">חזרה</button>`}
   <div class="foot">גרסה <span class="num">${APP_VERSION}</span></div></div>`;
 }
