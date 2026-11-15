@@ -573,7 +573,7 @@ function settings() {
     <div class="sh2">${icon('links')}<b>חיבור לגיליון</b></div>
     <div class="status"><span class="dot ${live ? (S.error ? 'bad' : 'ok') : ''}"></span><b>${live ? 'מחובר' : 'לא מחובר'}</b></div>
     ${live ? `<p class="sp">${esc(S.cfg.sheetName || S.cfg.sheetId)}<br>סנכרון אחרון: ${esc(when)} · החודש מתחיל ביום ${S.startDay}</p>` : ''}
-    ${!Auth.ready() ? '<p class="sp">חסרה הגדרת Google באפליקציה (קובץ config.js).</p>' : `<div class="brow">${live && !Auth.valid() ? '<button class="btn sm" data-act="signin">התחברות מחדש</button>' : ''}<button class="btn sm o" data-act="pick">${live ? 'החלפת גיליון' : 'התחברות עם גוגל'}</button>${live ? '<button class="btn sm danger" data-act="disconnect">ניתוק</button>' : ''}</div>`}
+    ${!Auth.ready() ? '<p class="sp">חסרה הגדרת Google באפליקציה (קובץ config.js).</p>' : `<div class="brow">${live && !Auth.valid() ? '<button class="btn sm" data-act="signin">התחברות מחדש</button>' : ''}<button class="btn sm o" data-act="pick">${live ? 'החלפת גיליון' : 'התחברות עם גוגל'}</button><button class="btn sm o" data-act="pasteLink">הדבקת קישור</button>${live ? '<button class="btn sm danger" data-act="disconnect">ניתוק</button>' : ''}</div>`}
   </section>
 
   ${live ? `<section class="sc2">
@@ -608,7 +608,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'6.0 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'6.1 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -756,7 +756,7 @@ function onboarding(locked) {
       <li>${icon('check')}<span>השינויים מתעדכנים בכל המכשירים</span></li>
     </ul>
     <div class="cta">
-    ${locked ? `<div class="assure">${icon('lock')}האפליקציה נעולה והנתונים מוסתרים</div><button class="btn big" data-act="unlockStart">כניסה</button>` : ready ? `<div class="assure">${icon('lock')}האפליקציה רואה רק את הגיליון שתבחרי</div><button class="btn big" data-act="wizStart">יצירת גיליון תקציב חדש</button><button class="btn o" data-act="pick" style="margin-top:var(--s3)">יש לי גיליון, התחברות עם גוגל</button>${false && Auth.conf().templateId ? `<a class="btn o tplbtn" href="https://docs.google.com/spreadsheets/d/${esc(Auth.conf().templateId)}/copy" target="_blank" rel="noopener">${icon('file-copy')}<span><b>אין לי גיליון עדיין</b><small>יצירת עותק מהתבנית</small></span></a>` : ''}` : '<div class="banner err" style="margin:0;text-align:right"><i class="ri-error-warning-fill"></i><span>האפליקציה עדיין לא הוגדרה מול Google, ולכן אי אפשר להתחבר. למנהלת: ממלאים את <b>config.js</b> (README, "הגדרת Google").</span></div>'}
+    ${locked ? `<div class="assure">${icon('lock')}האפליקציה נעולה והנתונים מוסתרים</div><button class="btn big" data-act="unlockStart">כניסה</button>` : ready ? `<div class="assure">${icon('lock')}האפליקציה רואה רק את הגיליון שתבחרי</div><button class="btn big" data-act="wizStart">יצירת גיליון תקציב חדש</button><button class="btn o" data-act="pick" style="margin-top:var(--s3)">יש לי גיליון, התחברות עם גוגל</button><button class="lnk" data-act="pasteLink" style="margin-top:var(--s3)">או הדבקת קישור לגיליון</button>${false && Auth.conf().templateId ? `<a class="btn o tplbtn" href="https://docs.google.com/spreadsheets/d/${esc(Auth.conf().templateId)}/copy" target="_blank" rel="noopener">${icon('file-copy')}<span><b>אין לי גיליון עדיין</b><small>יצירת עותק מהתבנית</small></span></a>` : ''}` : '<div class="banner err" style="margin:0;text-align:right"><i class="ri-error-warning-fill"></i><span>האפליקציה עדיין לא הוגדרה מול Google, ולכן אי אפשר להתחבר. למנהלת: ממלאים את <b>config.js</b> (README, "הגדרת Google").</span></div>'}
     ${S.error ? `<div class="hint" style="margin-top:var(--s3);color:var(--pt);text-align:center">${esc(S.error)}</div>` : ''}
     </div>
   </div>`;
@@ -890,6 +890,14 @@ async function act(a, t) {
     case 'prev': if (prevMonth()) load(prevMonth()); break;
     case 'next': if (nextMonth()) load(nextMonth()); break;
     case 'open': S.detailKey = k; S.screen = 'detail'; window.scrollTo(0, 0); render(); break;
+    case 'pasteLink': {
+      const s = prompt('הדביקי כאן את הקישור לגיליון (מהדפדפן במחשב). הגיליון צריך להיות כבר מחובר פעם אחת דרך "החלפת גיליון".'); if (!s) break;
+      const m = s.match(/\/d\/([a-zA-Z0-9_-]{20,})/) || s.trim().match(/^([a-zA-Z0-9_-]{25,})$/);
+      if (!m) { toast('לא זיהיתי קישור של גיליון'); break; }
+      try { await Auth.signIn(); } catch (e) { toast('ההתחברות לא הושלמה'); break; }
+      S.cfg = { sheetId: m[1], sheetName: '' }; LS.set('cfg', S.cfg); setupBridge(); S.needAuth = false; S.budgetCfg = null; S.error = null;
+      await connectFlow(); flush(); break;
+    }
     case 'wizStart': S.wiz = { startYm: new Date().getFullYear() * 100 + new Date().getMonth() + 1, months: 12, busy: false }; S.error = null; window.scrollTo(0, 0); render(); break;
     case 'wizCancel': S.wiz = null; S.error = null; render(); break;
     case 'wizCreate': wizCreate(); break;
