@@ -280,8 +280,8 @@ function view(item, isVar) {
   const carry = wk ? 0 : (item.carry || 0), planned = wk ? weekly : item.budget;
   const eff = planned + carry, budget = Math.max(0, eff), spent = wk ? (item.weeks[S.current.week] || 0) : item.spent;
   const p = budget > 0 ? spent / budget : (spent > 0 ? 2 : 0);
-  const st = p > 1.0000001 ? 'over' : (isVar && p >= 0.8 && p < 1) ? 'warn' : 'ok';
-  return { budget, spent, p, st, carry, planned, left: eff - spent };
+  const st = (p > 1.0000001 || eff - spent < -0.005) ? 'over' : (isVar && p >= 0.8 && p < 1) ? 'warn' : 'ok';
+  return { budget, eff, spent, p, st, carry, planned, left: eff - spent };
 }
 const tagsFor = key => { const set = new Set(S.tags[key] || []); S.entries.filter(e => e.key === key).forEach(e => (e.tags || []).forEach(t => set.add(t))); return [...set]; };
 
@@ -332,7 +332,15 @@ function banners() {
   return h;
 }
 
-const matchQ = (g, i, q) => !q || g.name.includes(q) || i.name.includes(q);
+// חיפוש: שם קטגוריה או סעיף, וגם תגיות והערות של הוצאות (מה שהוקלד בהוספת הוצאה)
+const hitText = (key, q) => {
+  const t = (S.tags[key] || []).find(x => x.includes(q)); if (t) return 'תגית: ' + t;
+  const e = S.entries.find(x => x.key === key && ((x.tags || []).some(y => y.includes(q)) || (x.note || '').includes(q)));
+  if (!e) return '';
+  const tag = (e.tags || []).find(y => y.includes(q));
+  return tag ? 'תגית: ' + tag : 'הערה: ' + e.note;
+};
+const matchQ = (g, i, q) => !q || g.name.includes(q) || i.name.includes(q) || !!hitText(i.key, q);
 function groupHtml(g, isVar, q) {
   const gi = gInfo(g.name);
   return `<section class="cat" data-g="${esc(g.name)}" style="--c:${gi.c}">
@@ -368,7 +376,7 @@ function renderCats() {
 function home() {
   const isVar = S.tab === 'var';
   const groups = sortedGroups(isVar ? S.data.variable : S.data.fixed, S.tab);
-  const total = groups.reduce((a, g) => a + g.items.reduce((x, i) => x + view(i, isVar).budget, 0), 0);
+  const total = groups.reduce((a, g) => a + g.items.reduce((x, i) => x + view(i, isVar).eff, 0), 0);   // כולל חוסרים מחודש קודם, כדי שהסכום יתאים למה שמוצג בכרטיסיות
   const cur = S.month === S.current.month;
   return `
   <div class="top"><span class="app">מעקב הוצאות עם מאיה<span id="sp">${syncPill()}</span></span>${isLive() ? `<button class="gb" data-act="lock" aria-label="יציאה מהתקציב">${icon('lock')}</button>` : ''}</div>
@@ -377,7 +385,7 @@ function home() {
     <button class="st" data-act="next" ${S.month >= 12 ? 'disabled' : ''} aria-label="חודש הבא">${icon('arrow-left-s')}</button>
     ${showSummary() ? `<button class="sumbtn" data-act="summary">${icon('file-list-3')}סיכום ${S.curYm && S.ym < S.curYm ? (MONTHS[S.month - 1] || 'חודש') : 'החודש'}</button>` : ''}</div>
   ${banners()}
-  ${searchField('hq', 'חיפוש בשוטפות ובקבועות', S.q, 'clearQ')}
+  ${searchField('hq', 'חיפוש לפי סעיף, תגית או הערה', S.q, 'clearQ')}
   <div id="tabs" ${S.q.trim() ? 'hidden' : ''}>
   <div class="seg"><button data-act="tab" data-v="var" class="${isVar ? 'on' : ''}">שוטפות</button><button data-act="tab" data-v="fixed" class="${!isVar ? 'on' : ''}">קבועות</button></div>
   ${isVar ? `<div class="seg sm"><button data-act="period" data-v="week" class="${S.period === 'week' ? 'on' : ''}" ${cur ? '' : 'disabled'}>שבוע</button><button data-act="period" data-v="month" class="${S.period === 'month' || !cur ? 'on' : ''}">חודש</button></div>` : ''}
@@ -392,8 +400,8 @@ function card(item, isVar) {
   const alert = v.st === 'over' ? `<div class="al pink">${v.carry < 0 ? 'במינוס' : 'חריגה של'} <span class="num">${fmt(v.left)}</span></div>` : v.st === 'warn' ? '<div class="al amb">מתקרבת לתקרה</div>' : '';
   return `<div class="sc ${v.st === 'over' ? 'ov' : ''}" data-act="open" data-k="${esc(item.key)}">
     <div class="tp"><div class="nm">${esc(item.name)}</div><button class="pls" data-act="add" data-k="${esc(item.key)}" aria-label="הוספת הוצאה ל${esc(item.name)}">+</button></div>
-    <div class="am"><b class="num">${fmt(v.spent)}</b><span>מתוך <span class="num">${fmt(v.budget)}</span></span></div>
-    ${v.p > 0 ? `<div class="ln"><i style="width:${Math.min(100, v.p * 100)}%"></i></div>` : ""}${isVar && S.period === 'week' && S.month === S.current.month ? `<div class="mo">החודש: <span class="num">${fmt(item.spent)}</span> מתוך <span class="num">${fmt(Math.max(0, item.budget + (item.carry || 0)))}</span>${item.carry ? ` · כולל גלגול ${item.carry > 0 ? '+' : '−'}<span class="num">${fmt(Math.abs(item.carry)).replace('−', '')}</span>` : ''}</div>` : ''}${alert}</div>`;
+    <div class="am"><b class="num">${fmt(v.spent)}</b><span>נשאר <span class="num${v.left < -0.005 ? ' neg' : ''}">${fmt(v.left)}</span></span></div>
+    ${v.p > 0 || v.st === 'over' ? `<div class="ln"><i style="width:${v.st === 'over' ? 100 : Math.min(100, v.p * 100)}%"></i></div>` : ""}${isVar && S.period === 'week' && S.month === S.current.month ? `<div class="mo">החודש: <span class="num">${fmt(item.spent)}</span> מתוך <span class="num">${fmt(Math.max(0, item.budget + (item.carry || 0)))}</span>${item.carry ? ` · כולל גלגול ${item.carry > 0 ? '+' : '−'}<span class="num">${fmt(Math.abs(item.carry)).replace('−', '')}</span>` : ''}</div>` : ''}${(() => { const q = S.q.trim(); return q && !item.name.includes(q) ? (h => h ? `<div class="mo">${esc(h)}</div>` : '')(hitText(item.key, q)) : ''; })()}${alert}</div>`;
 }
 
 function nav() {
@@ -416,7 +424,7 @@ function detail() {
   <div class="dt" style="--c:${gi.c}"><span class="ci">${icon(gi.i)}</span><div><b>${esc(item.name)}</b><span>${esc(group)} · ${MONTHS[S.month - 1]}</span></div></div>
   <div class="card dcard" style="--c:${gi.c}">
     <div class="dtop"><span class="ico">${icon('bank-card')}</span><div><small>הוצאתי החודש</small><b class="big num">${fmt(item.spent)}</b></div><span class="pct ${v.st === 'over' ? 'over' : ''}">${Math.round(eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%</span></div>
-    <div class="ln thick"><i style="width:${Math.min(100, eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%;background:${v.st === 'over' ? 'var(--pink)' : 'var(--ink)'}"></i></div>
+    <div class="ln thick"><i style="width:${v.st === 'over' ? 100 : Math.min(100, eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%;background:${v.st === 'over' ? 'var(--pink)' : 'var(--ink)'}"></i></div>
     ${item.carry ? `<p class="cx">${item.carry > 0 ? `נשארו <span class="num">${fmt(item.carry)}</span> מהחודש הקודם, והם התווספו לתקציב החודש.` : `היה חוסר של <span class="num">${fmt(-item.carry)}</span> בחודש הקודם, והוא הופחת מהתקציב החודש.`}</p>` : ''}
     ${left < 0 && ruleFor(item.key) === 'aside' ? '<p class="cx neg">הסעיף במינוס, ולכן אי אפשר להפקיד. ההפקדה תחכה עד שיהיה פלוס.</p>' : ''}
     <div class="dstats ${item.carry ? 'c3' : ''}"><div><small>התקציב</small><b class="num">${fmt(item.budget)}</b></div>${item.carry ? `<div><small>מגולגל</small><b class="num">${item.carry > 0 ? '+' : '−'}${fmt(Math.abs(item.carry)).replace('−', '')}</b></div>` : ''}${left >= 0 ? `<div><small>נשאר</small><b class="num">${fmt(left)}</b></div>` : `<div class="ov"><small>${item.carry < 0 ? 'במינוס' : 'חריגה'}</small><b class="num">${fmt(left)}</b></div>`}</div>
@@ -587,7 +595,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'5.2 · 13.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'5.3 · 13.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
