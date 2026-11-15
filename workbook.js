@@ -179,7 +179,8 @@
     tr[2] = tot(2); if (isVar) tr[3] = tot(3);
     months.forEach((m, mi) => { const c0 = pre + mi * per; for (let j = 0; j < per; j++) tr[c0 + j] = tot(c0 + j); });
     grid.push(tr);
-    return { grid: grid, per: per, pre: pre, count: count, rowCount: rows.length, width: width, first: first };
+    const groupStarts = []; rows.forEach((r, i) => { if (i > 0 && (r.it.grow || r.br) === r.br) groupStarts.push(first - 1 + i); });
+    return { grid: grid, per: per, pre: pre, count: count, rowCount: rows.length, width: width, first: first, groupStarts: groupStarts };
   }
 
   /* ---- לשוניות שהאפליקציה כותבת ---- */
@@ -195,6 +196,7 @@
   const width = (sheetId, c1, c2, px) => ({ updateDimensionProperties: { range: { sheetId: sheetId, dimension: 'COLUMNS', startIndex: c1, endIndex: c2 }, properties: { pixelSize: px }, fields: 'pixelSize' } });
   const protect = (sheetId, desc, extra) => ({ addProtectedRange: { protectedRange: Object.assign({ range: { sheetId: sheetId }, description: desc, warningOnly: true }, extra || {}) } });
 
+  const DARK = { style: 'SOLID_MEDIUM', color: { red: 0.1, green: 0.1, blue: 0.1 } };
   function viewFormat(sheetId, v) {
     const rng = (r1, r2, c1, c2) => ({ sheetId: sheetId, startRowIndex: r1, endRowIndex: r2, startColumnIndex: c1, endColumnIndex: c2 });
     const reqs = [headerFmt(sheetId, 3, 4, 0, v.width), width(sheetId, 0, 1, 130), width(sheetId, 1, 2, 190), width(sheetId, 2, v.pre, 90), width(sheetId, v.pre, v.width, 74),
@@ -204,6 +206,7 @@
       { repeatCell: { range: rng(4 + v.rowCount, 5 + v.rowCount, 0, v.width), cell: { userEnteredFormat: { backgroundColor: rgb('F4F0E7'), textFormat: { bold: true } } }, fields: 'userEnteredFormat(backgroundColor,textFormat)' } },
       { updateSheetProperties: { properties: { sheetId: sheetId, gridProperties: { frozenRowCount: 4, frozenColumnCount: 2 } }, fields: 'gridProperties.frozenRowCount,gridProperties.frozenColumnCount' } },
       protect(sheetId, 'לשונית לצפייה בלבד: נוסחאות. אם מחקת בטעות, בהגדרות האפליקציה יש "תיקון הגיליון"')];
+    (v.groupStarts || []).forEach(r => { reqs.push({ updateBorders: { range: rng(r, r + 1, 0, v.width), top: DARK } }); reqs.push({ updateBorders: { range: rng(r - 1, r, 0, v.width), bottom: DARK } }); });
     for (let mi = 0; mi < v.count; mi++) reqs.push({ mergeCells: { range: rng(2, 3, v.pre + mi * v.per, v.pre + (mi + 1) * v.per), mergeType: 'MERGE_ALL' } });
     return reqs;
   }
@@ -231,9 +234,9 @@
       } else if (k === 'fillhint') {
         fmt(r, r + 1, 4, 5, { backgroundColor: rgb('FFFF00'), textFormat: { fontFamily: 'Arial', fontSize: 16, bold: true }, horizontalAlignment: 'CENTER' }, 'backgroundColor,textFormat,horizontalAlignment');
         out.push({ updateBorders: { range: rg(r, r + 1, 4, 5), bottom: thin } });
-      } else if (k === 'sechdr') { band('0070C0', true); box(); merge(); fmt(r, r + 1, 3, 6, { horizontalAlignment: 'CENTER', wrapStrategy: 'WRAP' }, 'horizontalAlignment,wrapStrategy'); }
+      } else if (k === 'sechdr') { band('1F3864', true); box(); merge(); fmt(r, r + 1, 3, 6, { horizontalAlignment: 'CENTER', wrapStrategy: 'WRAP' }, 'horizontalAlignment,wrapStrategy'); }
       else if (k === 'total') { band('00B0F0', true); box(); merge(); }
-      else if (k === 'inctotal') { band('00B050', true); box(); merge(); }
+      else if (k === 'inctotal') { band('1B6B35', true); box(); merge(); }
       else if (k === 'exptotal') { band('D32F2F', true); box(); merge(); }
       else if (k === 'bothdr' || k === 'botbal') { band('7F7F7F', true); box(); merge(); }
       else if (k === 'botrow') { fmt(r, r + 1, 0, 6, { textFormat: { fontFamily: 'Arial', fontSize: 14, bold: true } }, 'textFormat'); box(); merge(); }
@@ -242,6 +245,7 @@
       else if (k === 'item') {
         box(); fmt(r, r + 1, 4, 5, { backgroundColor: rgb('FFFFCC') }, 'backgroundColor');
         if (m.first) {
+          out.push({ updateBorders: { range: rg(r, r + 1, 0, 6), top: DARK } }); out.push({ updateBorders: { range: rg(r - 1, r, 0, 6), bottom: DARK } });
           if (m.span > 1) out.push({ mergeCells: { range: rg(r, r + m.span, 0, 1), mergeType: 'MERGE_ALL' } });
           fmt(r, r + m.span, 0, 1, { horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE', wrapStrategy: 'WRAP' }, 'horizontalAlignment,verticalAlignment,wrapStrategy');
           out.push({ updateBorders: { range: rg(r, r + m.span, 0, 1), top: thin, bottom: thin, left: thin, right: thin } });
@@ -256,7 +260,8 @@
   function staticFormat(items, layout, marks) {
     const itemsPart = layout === 'flat' ? [] : [
       width(ID.ITEMS, 0, 1, 130), width(ID.ITEMS, 1, 2, 250), width(ID.ITEMS, 2, 3, 30), width(ID.ITEMS, 3, 4, 110), width(ID.ITEMS, 4, 5, 185), width(ID.ITEMS, 5, 6, 235), width(ID.ITEMS, 6, 7, 40), width(ID.ITEMS, 7, 8, 320),
-      { updateDimensionProperties: { range: { sheetId: ID.ITEMS, dimension: 'COLUMNS', startIndex: 8, endIndex: 9 }, properties: { hiddenByUser: true }, fields: 'hiddenByUser' } },
+      { addDimensionGroup: { range: { sheetId: ID.ITEMS, dimension: 'COLUMNS', startIndex: 8, endIndex: 9 } } },
+      { updateDimensionGroup: { dimensionGroup: { range: { sheetId: ID.ITEMS, dimension: 'COLUMNS', startIndex: 8, endIndex: 9 }, depth: 1, collapsed: true }, fields: 'collapsed' } },
       { updateSheetProperties: { properties: { sheetId: ID.ITEMS, gridProperties: { frozenRowCount: 5 } }, fields: 'gridProperties.frozenRowCount' } },
       protect(ID.ITEMS, 'עמודת המפתחות מחברת סעיף להוצאות. אל תמחקי', { range: { sheetId: ID.ITEMS, startRowIndex: 0, endRowIndex: 500, startColumnIndex: 8, endColumnIndex: 9 } })
     ].concat(Object.keys(marks || {}).filter(k => ['top', 'incT', 'fixT', 'varT', 'botInc', 'botExp', 'botBal'].includes(k)).map(k =>
