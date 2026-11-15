@@ -512,10 +512,6 @@ body{touch-action:manipulation}
 .wiz .hint{text-align:right;margin:var(--s5) 0 var(--s4)}
 .wiz .btn.big{margin-top:var(--s3)}
 
-.guide{text-align:right;padding:var(--s5) var(--s4);line-height:1.6}
-.guide b:first-child{display:block;font-size:17px;margin-bottom:var(--s3)}
-.guide ol{margin:0 0 var(--s4);padding:0 var(--s5) 0 0;color:var(--ink-2)}
-.guide li{margin-bottom:var(--s2)}
 
 /* אשף יצירת הגיליון: טקסט משני קטן, מרווח לפני "חזרה", והתקדמות */
 .wiz .sp.small{font-size:12px;line-height:1.5}
@@ -528,3 +524,19 @@ body{touch-action:manipulation}
 @keyframes pshine{to{transform:translateX(-100%)}}
 .wiz .ppct{font-size:13px;color:var(--mute);margin-top:6px}
 .wiz .psub{font-size:12px;color:var(--mute);margin-top:var(--s3)}
+
+/* מדריך: התקציב עדיין לא הוגדר */
+.guide{margin:var(--s5) var(--s4);padding:var(--s5) var(--s4);background:var(--card);border-radius:24px;border:1px solid var(--hair);text-align:right}
+.guide .gh{text-align:center;margin-bottom:var(--s5)}
+.guide .gh b{display:block;font-size:18px;margin-bottom:4px}
+.guide .gh span{font-size:13.5px;color:var(--mute)}
+.guide .steps{list-style:none;margin:0 0 var(--s5);padding:0;position:relative}
+.guide .steps li{display:flex;gap:var(--s3);position:relative;padding-bottom:var(--s4)}
+.guide .steps li:last-child{padding-bottom:0}
+.guide .steps li:not(:last-child)::before{content:"";position:absolute;right:15px;top:34px;bottom:2px;width:2px;background:var(--hair)}
+.guide .sn{flex:none;width:32px;height:32px;border-radius:50%;background:var(--ink);color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;position:relative;z-index:1}
+.guide .sb{flex:1;background:var(--sand-2);border-radius:16px;padding:var(--s3) var(--s4)}
+.guide .st1{display:flex;align-items:center;gap:8px;font-size:15px}
+.guide .st1 i{font-size:18px;color:var(--ink-2)}
+.guide .sb p{margin:4px 0 0;font-size:13.5px;line-height:1.5;color:var(--ink-2)}
+.guide .brow{justify-content:center}

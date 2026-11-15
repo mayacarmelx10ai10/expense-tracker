@@ -1,5 +1,5 @@
 // הקבצים של האפליקציה נטענים מהמטמון מיד (בלי מסך לבן), ובמקביל מתעדכנים ברקע מהרשת. גרסה חדשה מופיעה בפתיחה הבאה, וההודעה "יש גרסה חדשה" מופיעה בזמן הפתיחה.
-const CACHE='expenses-v47';
+const CACHE='expenses-v48';
 const SHELL=['./','index.html','app.css','app.js','workbook.js','bridge.js','config.js','icon.svg','apple-touch-icon.png','icon-192.png','icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});

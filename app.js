@@ -608,7 +608,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'7.9 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'8.0 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -761,9 +761,15 @@ function filesScreen() {
 /* גיליון חדש בלי תקציב: מסבירים מה עושים */
 function emptyGuide() {
   const url = 'https://docs.google.com/spreadsheets/d/' + S.cfg.sheetId + '/edit';
-  return `<div class="empty guide"><b>עוד לא הגדרת תקציב</b>
-    <ol><li>פתחי את הגיליון בלחיצה על הכפתור.</li><li>בלשונית <b>"התקציב"</b>, בעמודה <b>"תקציב חדש"</b>, כתבי סכום ליד כל סעיף שרלוונטי לך (בהכנסות ובהוצאות). אפשר לשנות שמות, למחוק סעיפים שלא צריך ולהוסיף שורות.</li><li>חזרי לאפליקציה ומשכי למטה לרענון. הסעיפים עם תקציב יופיעו כאן.</li></ol>
-    <a class="btn sm" href="${esc(url)}" target="_blank" rel="noopener">פתיחת הגיליון</a></div>`;
+  const steps = [
+    ['links', 'פתחי את הגיליון', 'העתיקי את הקישור ופתחי אותו במחשב.'],
+    ['edit-2', 'התאימי את הסעיפים', 'בלשונית <b>"התקציב"</b> אפשר לשנות שמות, למחוק סעיפים מיותרים ולהוסיף שורות.'],
+    ['money-dollar-circle', 'הגדירי סכומים', 'בעמודת <b>"תקציב חדש"</b>, הזיני סכום לכל סעיף הכנסה או הוצאה שרלוונטי לך.'],
+    ['refresh', 'חזרי לאפליקציה', 'משכי למטה לרענון. הסעיפים שהגדרת להם תקציב יופיעו כאן.']
+  ];
+  return `<div class="guide"><div class="gh"><b>התקציב עדיין לא הוגדר</b><span>מומלץ להגדיר את התקציב במחשב.</span></div>
+    <ol class="steps">${steps.map((t, i) => `<li><span class="sn">${i + 1}</span><div class="sb"><div class="st1">${icon(t[0])}<b>${t[1]}</b></div><p>${t[2]}</p></div></li>`).join('')}</ol>
+    <div class="brow"><a class="btn sm" href="${esc(url)}" target="_blank" rel="noopener">פתיחת הגיליון</a><button class="btn sm o" data-act="copyLink" data-k="${esc(url)}">העתקת הקישור</button></div></div>`;
 }
 
 const SHEETS_ICON = '<svg viewBox="0 0 40 52" width="56" height="72" aria-hidden="true"><path d="M4 0h20l16 16v32a4 4 0 0 1-4 4H4a4 4 0 0 1-4-4V4a4 4 0 0 1 4-4z" fill="#23A566"/><path d="M24 0l16 16H28a4 4 0 0 1-4-4z" fill="#188038"/><rect x="9" y="25" width="22" height="16" rx="1.5" fill="#fff"/><path d="M9 30.5h22M9 35.5h22M17.5 25v16" stroke="#23A566" stroke-width="1.6" fill="none"/></svg>';
@@ -939,6 +945,7 @@ async function act(a, t) {
     case 'wizStart': S.files = null; S.wiz = { startYm: new Date().getFullYear() * 100 + new Date().getMonth() + 1, months: 12, busy: false }; S.error = null; window.scrollTo(0, 0); render(); break;
     case 'wizCancel': S.wiz = null; S.error = null; render(); break;
     case 'wizCreate': wizCreate(); break;
+    case 'copyLink': { try { await navigator.clipboard.writeText(k); toast('הקישור הועתק'); } catch (e) { toast('לא הצלחתי להעתיק'); } break; }
     case 'repair': {
       if (!confirm('לשחזר את הנוסחאות, ההגנות והלשוניות בגיליון?')) break;
       try { await call('repair'); toast('הגיליון תוקן'); } catch (err) { toast('התיקון לא הצליח: ' + err.message); }
