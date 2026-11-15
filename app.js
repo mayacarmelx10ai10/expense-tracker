@@ -601,7 +601,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'5.4 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'5.5 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -667,6 +667,7 @@ function budgetBlock() {
   if (!isLive()) return `<p class="sp">אחרי החיבור אפשר לבחור לאיזו עמודה בגיליון להתייחס. שינוי חל רק מהחודש הבא.</p>`;
   const c = S.budgetCfg;
   if (!c) return `<p class="sp">טוען…</p>`;
+  if (c.format === 2) return `<p class="sp">התקציב נכתב בגיליון, בלשונית "התקציב", בעמודה "תקציב חודשי".<br>שינוי חל רק קדימה: החודש הנוכחי והחודשים שעברו נשארים כמו שהיו.</p>`;
   const sel = c.pending ? c.pending.col : c.current;
   return `<div class="selw"><select id="cfgCol" class="sel">${c.columns.map(x => `<option value="${x.col}" ${x.col === sel ? 'selected' : ''}>${esc(x.header || 'עמודה ' + x.col)} · עמודה ${x.col}</option>`).join('')}</select></div>
     <p class="sp">בשימוש עכשיו: עמודה ${esc(c.current)}.${c.pending ? ` <b>מתוכנן: עמודה ${esc(c.pending.col)} מחודש ${esc(ymLabel(c.pending.from))}.</b>` : ''}<br>שינוי חל רק מחודש ${esc(ymLabel(c.nextYm))}. החודש הנוכחי והחודשים שעברו לא משתנים.</p>
@@ -697,7 +698,7 @@ function onboarding(locked) {
       <li>${icon('check')}<span>השינויים מתעדכנים בכל המכשירים</span></li>
     </ul>
     <div class="cta">
-    ${locked ? `<div class="assure">${icon('lock')}האפליקציה נעולה והנתונים מוסתרים</div><button class="btn big" data-act="unlockStart">כניסה</button>` : ready ? `<div class="assure">${icon('lock')}האפליקציה רואה רק את הגיליון שתבחרי</div><button class="btn big" data-act="pick">התחברות עם גוגל</button>${Auth.conf().templateId ? `<a class="lnk tpl" href="https://docs.google.com/spreadsheets/d/${esc(Auth.conf().templateId)}/copy" target="_blank" rel="noopener">אין לי גיליון עדיין: יצירת עותק מהתבנית</a>` : ''}` : '<div class="banner err" style="margin:0;text-align:right"><i class="ri-error-warning-fill"></i><span>האפליקציה עדיין לא הוגדרה מול Google, ולכן אי אפשר להתחבר. למנהלת: ממלאים את <b>config.js</b> (README, "הגדרת Google").</span></div>'}
+    ${locked ? `<div class="assure">${icon('lock')}האפליקציה נעולה והנתונים מוסתרים</div><button class="btn big" data-act="unlockStart">כניסה</button>` : ready ? `<div class="assure">${icon('lock')}האפליקציה רואה רק את הגיליון שתבחרי</div><button class="btn big" data-act="pick">התחברות עם גוגל</button>${Auth.conf().templateId ? `<a class="btn o tplbtn" href="https://docs.google.com/spreadsheets/d/${esc(Auth.conf().templateId)}/copy" target="_blank" rel="noopener">${icon('file-copy')}<span><b>אין לי גיליון עדיין</b><small>יצירת עותק מהתבנית</small></span></a>` : ''}` : '<div class="banner err" style="margin:0;text-align:right"><i class="ri-error-warning-fill"></i><span>האפליקציה עדיין לא הוגדרה מול Google, ולכן אי אפשר להתחבר. למנהלת: ממלאים את <b>config.js</b> (README, "הגדרת Google").</span></div>'}
     ${S.error ? `<div class="hint" style="margin-top:var(--s3);color:var(--pt);text-align:center">${esc(S.error)}</div>` : ''}
     </div>
   </div>`;

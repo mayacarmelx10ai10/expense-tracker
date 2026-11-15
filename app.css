@@ -494,3 +494,10 @@ body{touch-action:manipulation}
 .acc.x.open .accb i{transform:rotate(180deg)}
 .acc.x .accl{display:none}
 .acc.x.open .accl{display:block}
+
+/* כפתור "אין לי גיליון עדיין" במסך הפתיחה: בולט, בסגנון כפתור משני */
+.tplbtn{display:flex;align-items:center;justify-content:center;gap:var(--s3);margin-top:var(--s3);padding:14px 18px;border:2px solid var(--ink);border-radius:20px;color:var(--ink);background:var(--card);text-decoration:none;text-align:start}
+.tplbtn i{font-size:24px}
+.tplbtn span{display:flex;flex-direction:column;line-height:1.25}
+.tplbtn b{font-size:16px;font-weight:700}
+.tplbtn small{font-size:13px;color:var(--mute);font-weight:400}
