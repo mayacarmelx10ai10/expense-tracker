@@ -244,9 +244,16 @@ async function pickSheet() {
     }).build().setVisible(true);
 }
 
+/* הייבוא מקובץ קיים מוסתר מהלקוחות. כדי להפעיל אותו בשבילך: localStorage.setItem('showImport','1') ורענון */
+const SHOW_IMPORT = (() => { try { return localStorage.getItem('showImport') === '1'; } catch (e) { return false; } })();
 const monthSeq = () => (S.ord && S.ord.length ? S.ord : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 const prevMonth = () => { const q = monthSeq(), i = q.indexOf(S.month); return i > 0 ? q[i - 1] : null; };
 const nextMonth = () => { const q = monthSeq(), i = q.indexOf(S.month); return i >= 0 && i < q.length - 1 ? q[i + 1] : null; };
+/* רשימת חודשי התקציב (עד 12) עם שנה, לבחירה בתפריט נפתח */
+function monthOptions() {
+  const q = monthSeq(), i = Math.max(0, q.indexOf(S.month)), y0 = S.ym ? Math.floor(S.ym / 100) : new Date().getFullYear();
+  return q.map((m, j) => { const t = y0 * 12 + (S.month - 1) + (j - i), mo = ((t % 12) + 12) % 12, yr = Math.floor(t / 12); return `<option value="${m}" ${m === S.month ? 'selected' : ''}>${MONTHS[mo]} ${yr}</option>`; }).join('');
+}
 function applyBudget(b) {
   S.ord = b.order || null; S.fmt = b.format || 1; S.ended = !!b.ended;
   S.ym = b.ym || 0; S.curYm = b.currentYm || 0; if (S.curYm && !LS.get('seenYm', 0)) LS.set('seenYm', S.curYm);   // התקנה ראשונה: בלי התרעה
@@ -409,9 +416,7 @@ function home() {
   const nb = S.fmt === 2 && !S.loading && !S.q.trim() && !sortedGroups(S.data.variable, 'var').length && !sortedGroups(S.data.fixed, 'fixed').length;
   return `
   <div class="top"><span class="app">מעקב הוצאות עם מאיה<span id="sp">${syncPill()}</span></span>${isLive() ? `<button class="gb" data-act="lock" aria-label="יציאה מהתקציב">${icon('lock')}</button>` : ''}</div>
-  <div ${nb ? 'hidden' : ''}><div class="mt ${showSummary() ? 'hs' : ''}"><button class="st" data-act="prev" ${prevMonth() ? '' : 'disabled'} aria-label="חודש קודם">${icon('arrow-right-s')}</button>
-    <b>${MONTHS[S.month - 1] || ''} ${S.ym ? Math.floor(S.ym / 100) : new Date().getFullYear()}</b>
-    <button class="st" data-act="next" ${nextMonth() ? '' : 'disabled'} aria-label="חודש הבא">${icon('arrow-left-s')}</button>
+  <div ${nb ? 'hidden' : ''}><div class="mt ${showSummary() ? 'hs' : ''}"><div class="mdd"><select id="mSel" aria-label="בחירת חודש" onchange="load(+this.value)">${monthOptions()}</select></div>
     ${showSummary() ? `<button class="sumbtn" data-act="summary">${icon('file-list-3')}סיכום ${S.curYm && S.ym < S.curYm ? (MONTHS[S.month - 1] || 'חודש') : 'החודש'}</button>` : ''}</div></div>
   ${banners()}
   <div ${nb ? 'hidden' : ''}>${searchField('hq', 'חיפוש לפי סעיף, תגית או הערה', S.q, 'clearQ')}
@@ -442,9 +447,11 @@ function detail() {
   const f = findItem(S.detailKey);
   if (!f) { S.screen = 'home'; return home(); }
   const { group, item, isVar } = f, gi = gInfo(group), v = view(item, isVar), eff = item.budget + (item.carry || 0), left = eff - item.spent;
-  const ents = S.entries.filter(e => e.key === item.key).sort((a, b) => b.dt.localeCompare(a.dt));
+  const all = S.entries.filter(e => e.key === item.key).sort((a, b) => b.dt.localeCompare(a.dt));
+  if (S.tagFor !== item.key + '|' + S.month) { S.tagFor = item.key + '|' + S.month; S.tagF = ''; }
+  const ents = S.tagF ? all.filter(e => (e.tags || []).includes(S.tagF)) : all;
   const multi = new Set(S.entries.map(e => e.by).filter(Boolean)).size > 1;
-  const byTag = {}; ents.forEach(e => (e.tags || []).forEach(t => { byTag[t] = (byTag[t] || 0) + e.amount; }));
+  const byTag = {}; all.forEach(e => (e.tags || []).forEach(t => { byTag[t] = (byTag[t] || 0) + e.amount; }));
   const tagRows = Object.entries(byTag).sort((a, b) => b[1] - a[1]);
   const mx = tagRows.length ? tagRows[0][1] : 1;
   const alert = v.st === 'over' ? `<div class="al pink" style="margin-top:12px">חריגה של <span class="num">${fmt(v.spent - v.budget)}</span></div>` : v.st === 'warn' ? '<div class="al amb" style="margin-top:12px">מתקרבת לתקרה</div>' : '';
@@ -463,7 +470,8 @@ function detail() {
       return can ? `<div class="dpbox"><p class="why">מכיוון שלא משתמשים בסעיף הזה בכל חודש, מומלץ להעביר את היתרה לחשבון נפרד, כדי שתישמר עד שתצטרכו אותה.<br><br>ההפקדה לא נחשבת הוצאה: הכסף נשאר שלך ומופיע בחודש הבא ב"נשאר".${item.carry > 0.005 ? `<br><br><b>בחשבון הנפרד אמורים להיות בסך הכול <span class="num">${fmt(left)}</span></b> אחרי ההפקדה (<span class="num">${fmt(item.carry)}</span> מחודשים קודמים ועוד <span class="num">${fmt(dueAmt)}</span> מהחודש).` : ''}</p><button class="chk" data-act="depo" data-k="${esc(item.key)}" data-v="${Math.round(dueAmt * 100) / 100}">${icon('coins')}הפקדתי <b class="num">${fmt(dueAmt)}</b></button></div>` : '';
     })()}
     ${v.st === 'warn' ? '<div class="al amb" style="margin-top:12px">מתקרבת לתקרה</div>' : ''}</div>
-  ${tagRows.length ? `<div class="secl">לפי תגית</div><div class="tgl">${tagRows.map(([t, a]) => `<div class="tr"><div><span>${esc(t)}</span><span class="tp2"><b class="num">${fmt(a)}</b><em>${Math.round(item.spent > 0 ? a / item.spent * 100 : 0)}%</em></span></div><div class="ln"><i style="width:${a / mx * 100}%"></i></div></div>`).join('')}</div>` : ''}
+  ${tagRows.length ? `<div class="secl">לפי תגית</div><div class="tgl">${tagRows.map(([t, a]) => `<button class="tr ${S.tagF === t ? 'on' : ''}" data-act="tagF" data-v="${esc(t)}"><div><span>${esc(t)}</span><span class="tp2"><b class="num">${fmt(a)}</b><em>${Math.round(item.spent > 0 ? a / item.spent * 100 : 0)}%</em></span></div><div class="ln"><i style="width:${a / mx * 100}%"></i></div></button>`).join('')}</div>` : ''}
+  ${S.tagF ? `<div class="tfl"><span>מציגה רק: <b>${esc(S.tagF)}</b> · <span class="num">${fmt(ents.reduce((x, e) => x + e.amount, 0))}</span></span><button data-act="tagF" data-v="${esc(S.tagF)}">הצגת הכול ${icon('close')}</button></div>` : ''}
   ${ents.length ? '<div class="secl">ההוצאות החודש</div>' : ''}
   <div class="list">${ents.length ? ents.map(e => { const w = whenText(e.dt); return `<div class="e"><div>${esc(w.day)}<div class="tm"><span class="num">${w.time}</span></div>${(e.tags || []).length ? `<div class="etg">${e.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}${e.note ? `<div class="en">${esc(e.note)}</div>` : ''}${multi && e.by ? `<div class="by">נוסף ע״י ${esc(e.by)}</div>` : ''}</div>
       <div class="ac"><b class="num">${fmt(e.amount)}</b><button data-act="edit" data-id="${esc(e.id)}" aria-label="עריכה">${icon('pencil')}</button><button data-act="del" data-id="${esc(e.id)}" aria-label="מחיקה">${icon('delete-bin-6')}</button></div></div>`; }).join('') : `<div class="emptyx">${EMPTY_ART}<p>עוד אין הוצאות החודש</p></div>`}</div>
@@ -626,7 +634,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'9.6 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'9.7 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -742,7 +750,7 @@ function wizard() {
     ${S.error ? `<div class="hint" style="color:var(--pt)">${esc(S.error)}</div>` : ''}
     ${w.busy ? `<div class="prog" id="wizProg"><div class="pmsg" id="wizMsg">${esc(w.msg || 'מתחילה…')}</div><div class="pbar"><i id="wizBar" style="width:${w.pct || 0}%"></i></div><div class="ppct num" id="wizPct">${Math.round(w.pct || 0)}%</div><div class="psub">זה לוקח כחצי דקה. אפשר להשאיר את המסך פתוח.</div></div>`
     : `<button class="btn big" data-act="wizCreate">יצירת הגיליון</button>
-    <button class="lnk" data-act="migOpen" style="margin-top:var(--s4)">יש לי תקציב קיים לייבוא</button>
+    ${SHOW_IMPORT ? '<button class="lnk" data-act="migOpen" style="margin-top:var(--s4)">יש לי תקציב קיים לייבוא</button>' : ''}
     <button class="lnk wback" data-act="wizCancel">חזרה</button>`}
   <div class="foot">גרסה <span class="num">${APP_VERSION}</span></div></div>`;
 }
@@ -988,6 +996,7 @@ async function act(a, t) {
   switch (a) {
     case 'tab': S.tab = v; render(); break;
     case 'period': S.period = v; render(); break;
+    case 'tagF': S.tagF = S.tagF === v ? '' : v; render(); break;
     case 'prev': if (prevMonth()) load(prevMonth()); break;
     case 'next': if (nextMonth()) load(nextMonth()); break;
     case 'open': S.detailKey = k; S.screen = 'detail'; window.scrollTo(0, 0); render(); break;

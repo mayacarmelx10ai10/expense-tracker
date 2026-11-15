@@ -606,3 +606,15 @@ button:not([disabled]):active,.btn:not([disabled]):active{transform:scale(.96);f
   button[disabled]{cursor:default}
 }
 @media (prefers-reduced-motion:reduce){button,.btn{transition:none}}
+
+/* בחירת חודש בתפריט נפתח */
+.mdd{position:relative;flex:1;min-width:0}
+.mdd select{appearance:none;-webkit-appearance:none;width:100%;border:0;background:transparent;font:inherit;font-size:26px;font-weight:700;letter-spacing:-.3px;color:var(--ink);padding:2px 0 2px 28px;cursor:pointer;outline:0;direction:rtl}
+.mdd::after{content:"";position:absolute;left:4px;top:50%;width:9px;height:9px;margin-top:-7px;border-left:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink);transform:rotate(-45deg) scale(.8);pointer-events:none}
+.mdd::after{transform:rotate(-45deg) translate(2px,-2px) scale(.8)}
+.mt.hs .mdd select{font-size:22px}
+/* סינון לפי תגית */
+.tgl .tr{display:block;width:100%;text-align:start;border-radius:12px;padding:6px 8px;margin:0 -8px;width:calc(100% + 16px)}
+.tgl .tr.on{background:var(--sand-2);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.tfl{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);margin:var(--s3) var(--s4) 0;padding:10px var(--s3);background:var(--sand);border-radius:14px;font-size:14px}
+.tfl button{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:var(--ink);text-decoration:underline}
