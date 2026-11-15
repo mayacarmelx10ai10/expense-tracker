@@ -280,8 +280,10 @@ function view(item, isVar) {
   const carry = wk ? 0 : (item.carry || 0), planned = wk ? weekly : item.budget;
   const eff = planned + carry, budget = Math.max(0, eff), spent = wk ? (item.weeks[S.current.week] || 0) : item.spent;
   const p = budget > 0 ? spent / budget : (spent > 0 ? 2 : 0);
-  const st = (p > 1.0000001 || eff - spent < -0.005) ? 'over' : (isVar && p >= 0.8 && p < 1) ? 'warn' : 'ok';
-  return { budget, eff, spent, p, st, carry, planned, left: eff - spent };
+  // בתצוגת שבוע, מה שנשאר לא יכול להיות יותר ממה שנשאר לחודש כולו: אם החודש בחריגה, גם השבוע מראה חריגה
+  const left = wk ? Math.min(eff - spent, item.budget + (item.carry || 0) - item.spent) : eff - spent;
+  const st = (p > 1.0000001 || left < -0.005) ? 'over' : (isVar && p >= 0.8 && p < 1) ? 'warn' : 'ok';
+  return { budget, eff, spent, p, st, carry, planned, left };
 }
 const tagsFor = key => { const set = new Set(S.tags[key] || []); S.entries.filter(e => e.key === key).forEach(e => (e.tags || []).forEach(t => set.add(t))); return [...set]; };
 
