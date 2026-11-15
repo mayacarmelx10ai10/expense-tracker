@@ -608,7 +608,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'6.5 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'6.6 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -686,17 +686,15 @@ function budgetBlock() {
 function wizYms() { const n = new Date(), out = []; for (let i = -1; i < 6; i++) { const d = new Date(n.getFullYear(), n.getMonth() + i, 1); out.push(d.getFullYear() * 100 + d.getMonth() + 1); } return out; }
 function wizard() {
   const w = S.wiz, yms = wizYms(), cur = new Date().getFullYear() * 100 + new Date().getMonth() + 1;
-  const end = (() => { const s = w.startYm, t = (s % 100) - 1 + w.months - 1; return (Math.floor(s / 100) + Math.floor(t / 12)) * 100 + (t % 12) + 1; })();
   return `<div class="top"><span class="app">מעקב הוצאות עם מאיה</span></div>
   <div class="wel wiz">
-    <h2>יצירת גיליון תקציב</h2>
-    <p>האפליקציה תיצור בגוגל דרייב שלך גיליון חדש, עם הסעיפים הנפוצים. בגיליון כותבים את התקציב ורואים את ההוצאות לאורך זמן.</p>
+    <h2>יצירת תקציב בדרייב</h2>
+    <p>האפליקציה יוצרת גיליון ב-Google Drive שלך, שבו מגדירים תקציב. את ההוצאות מעדכנים בקלות דרך האפליקציה, והן נשמרות אוטומטית בגיליון.</p>
     <label class="lab">מאיזה חודש מתחיל התקציב?</label>
     <div class="selw"><select id="wizStart" class="sel">${yms.map(y => `<option value="${y}" ${y === w.startYm ? 'selected' : ''}>${MONTHS[(y % 100) - 1]} ${Math.floor(y / 100)}${y === cur ? ' (החודש)' : ''}</option>`).join('')}</select></div>
     <label class="lab">לכמה חודשים?</label>
     <div class="selw"><select id="wizMonths" class="sel">${[12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(m => `<option value="${m}" ${m === w.months ? 'selected' : ''}>${m} חודשים</option>`).join('')}</select></div>
-    <p class="sp">התקופה: ${MONTHS[(w.startYm % 100) - 1]} ${Math.floor(w.startYm / 100)} עד ${MONTHS[(end % 100) - 1]} ${Math.floor(end / 100)}.</p>
-    <div class="hint" style="margin:var(--s3) 0">המקסימום בגיליון אחד הוא 12 חודשים, כדי שהיומן יישאר קטן ומהיר. כשהתקופה מסתיימת, האפליקציה מציעה לפתוח גיליון חדש, והיתרות עוברות אליו.</div>
+    <p class="sp">בסוף התקופה האפליקציה תציע ליצור גיליון חדש ולהעביר אליו את היתרות.</p>
     ${S.error ? `<div class="hint" style="color:var(--pt)">${esc(S.error)}</div>` : ''}
     <button class="btn big" data-act="wizCreate" ${w.busy ? 'disabled' : ''}>${w.busy ? 'יוצרת את הגיליון…' : 'יצירת הגיליון'}</button>
     <button class="lnk" data-act="wizCancel" style="margin-top:var(--s3)">חזרה</button>
