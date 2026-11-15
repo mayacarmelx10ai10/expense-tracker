@@ -397,7 +397,7 @@ function home() {
 
 function card(item, isVar) {
   const v = view(item, isVar);
-  const alert = v.st === 'over' ? `<div class="al pink">${v.carry < 0 ? 'במינוס' : 'חריגה של'} <span class="num">${fmt(v.left)}</span></div>` : v.st === 'warn' ? '<div class="al amb">מתקרבת לתקרה</div>' : '';
+  const alert = v.st === 'over' ? `<div class="al pink">חריגה של <span class="num">${fmt(v.left)}</span></div>` : v.st === 'warn' ? '<div class="al amb">מתקרבת לתקרה</div>' : '';
   return `<div class="sc ${v.st === 'over' ? 'ov' : ''}" data-act="open" data-k="${esc(item.key)}">
     <div class="tp"><div class="nm">${esc(item.name)}</div><button class="pls" data-act="add" data-k="${esc(item.key)}" aria-label="הוספת הוצאה ל${esc(item.name)}">+</button></div>
     <div class="am"><b class="num">${fmt(v.spent)}</b><span>נשאר <span class="num${v.left < -0.005 ? ' neg' : ''}">${fmt(v.left)}</span></span></div>
@@ -426,8 +426,8 @@ function detail() {
     <div class="dtop"><span class="ico">${icon('bank-card')}</span><div><small>הוצאתי החודש</small><b class="big num">${fmt(item.spent)}</b></div><span class="pct ${v.st === 'over' ? 'over' : ''}">${Math.round(eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%</span></div>
     <div class="ln thick"><i style="width:${v.st === 'over' ? 100 : Math.min(100, eff > 0 ? item.spent / eff * 100 : (item.spent > 0 ? 100 : 0))}%;background:${v.st === 'over' ? 'var(--pink)' : 'var(--ink)'}"></i></div>
     ${item.carry ? `<p class="cx">${item.carry > 0 ? `נשארו <span class="num">${fmt(item.carry)}</span> מהחודש הקודם, והם התווספו לתקציב החודש.` : `היה חוסר של <span class="num">${fmt(-item.carry)}</span> בחודש הקודם, והוא הופחת מהתקציב החודש.`}</p>` : ''}
-    ${left < 0 && ruleFor(item.key) === 'aside' ? '<p class="cx neg">הסעיף במינוס, ולכן אי אפשר להפקיד. ההפקדה תחכה עד שיהיה פלוס.</p>' : ''}
-    <div class="dstats ${item.carry ? 'c3' : ''}"><div><small>התקציב</small><b class="num">${fmt(item.budget)}</b></div>${item.carry ? `<div><small>מגולגל</small><b class="num">${item.carry > 0 ? '+' : '−'}${fmt(Math.abs(item.carry)).replace('−', '')}</b></div>` : ''}${left >= 0 ? `<div><small>נשאר</small><b class="num">${fmt(left)}</b></div>` : `<div class="ov"><small>${item.carry < 0 ? 'במינוס' : 'חריגה'}</small><b class="num">${fmt(left)}</b></div>`}</div>
+    ${left < 0 && ruleFor(item.key) === 'aside' ? '<p class="cx neg">הסעיף בחריגה, ולכן אי אפשר להפקיד. ההפקדה תחכה עד שיהיה פלוס.</p>' : ''}
+    <div class="dstats ${item.carry ? 'c3' : ''}"><div><small>התקציב</small><b class="num">${fmt(item.budget)}</b></div>${item.carry ? `<div><small>מגולגל</small><b class="num">${item.carry > 0 ? '+' : '−'}${fmt(Math.abs(item.carry)).replace('−', '')}</b></div>` : ''}${left >= 0 ? `<div><small>נשאר</small><b class="num">${fmt(left)}</b></div>` : `<div class="ov"><small>חריגה</small><b class="num">${fmt(left)}</b></div>`}</div>
     ${(() => {
       const d = (S.deposits[S.ym] || {})[item.key], dueAmt = left - Math.max(0, item.carry || 0), can = dueAmt > 0.005 && ruleFor(item.key) === 'aside' && ((S.curYm && S.ym < S.curYm) || showSummary() === 'now');
       if (d) return `<div class="dpbox done">${icon('checkbox-circle')}<span>הופקד <b class="num">${fmt(d.amt)}</b> · ${esc(d.day)}${item.carry > 0.005 ? `<small style="display:block">בחשבון הנפרד אמורים להיות בסך הכול <span class="num">${fmt(left)}</span></small>` : ''}</span><button class="lnk" data-act="undepo" data-k="${esc(item.key)}">ביטול</button></div>`;
@@ -445,7 +445,7 @@ function detail() {
 const EOM = { carry: 'לגלגל לחודש הבא', aside: 'לשים בצד', ask: 'לשאול' };
 const EOM_HELP = [
   ['לגלגל לחודש הבא', 'היתרה עוברת לתקציב החודש הבא.'],
-  ['לשים בצד', 'היתרה מועברת לחשבון נפרד. אם הסעיף במינוס אי אפשר להפקיד, והחוסר מתגלגל עד שיהיה פלוס.'],
+  ['לשים בצד', 'היתרה מועברת לחשבון נפרד. אם הסעיף בחריגה אי אפשר להפקיד, והחוסר מתגלגל עד שיהיה פלוס.'],
   ['לשאול', 'בסוף החודש האפליקציה שואלת מה לעשות.']
 ];
 const eomRule = k => { const v = S.eomRules[k]; return v === 'box' ? 'aside' : v === 'part' ? 'ask' : EOM[v] ? v : ''; };   // ערכים מגרסאות קודמות
@@ -507,7 +507,7 @@ function summaryScreen() {
     ${acc('הוצאו פחות מהמתוכנן', under.length, under.map(r => line(r, left(r), tag(r))).join(''))}
     <div class="acc x${S.unspOpen ? ' open' : ''}"><button class="accb" data-act="tgacc" aria-expanded="${!!S.unspOpen}"><span>נשאר כסף שלא הוצא<small>לא כולל מה שמופקד בצד</small></span><b class="num">${fmt(unspent)}</b>${icon('arrow-down-s')}</button>${carryBox}<div class="accl">${notAside.map(r => line(r, left(r), tag(r))).join('') || '<p class="sp">אין</p>'}</div></div>
   </section>
-  ${showDeposit ? `<div class="secl">כסף שנשאר בסעיפים שבחרת לשים בצד</div><section class="sc2 eg sr">${asideRows.length ? `<p class="sp">הפקדה לא נחשבת הוצאה: היא רק מונעת מהכסף להתערבב בשוטף, והיתרה ממשיכה לחודש הבא. סמני אחרי שהפקדת בפועל.</p>${asideRows.map(depRow).join('')}` : ''}${negAside.length ? `<p class="sp">הסעיפים האלה במינוס. אי אפשר להפקיד מינוס, אז החוסר מתגלגל לחודש הבא וההפקדה תחכה עד שיהיה פלוס.</p>${negAside.map(negRow).join('')}` : ''}</section>` : ''}
+  ${showDeposit ? `<div class="secl">כסף שנשאר בסעיפים שבחרת לשים בצד</div><section class="sc2 eg sr">${asideRows.length ? `<p class="sp">הפקדה לא נחשבת הוצאה: היא רק מונעת מהכסף להתערבב בשוטף, והיתרה ממשיכה לחודש הבא. סמני אחרי שהפקדת בפועל.</p>${asideRows.map(depRow).join('')}` : ''}${negAside.length ? `<p class="sp">הסעיפים האלה בחריגה. אי אפשר להפקיד מינוס, אז החוסר מתגלגל לחודש הבא וההפקדה תחכה עד שיהיה פלוס.</p>${negAside.map(negRow).join('')}` : ''}</section>` : ''}
   ${sec('צריך להחליט', askRows, askRow, 'מה לעשות עם מה שנשאר בסעיפים האלה.')}
   ${nav()}`;
 }
