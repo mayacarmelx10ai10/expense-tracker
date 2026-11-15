@@ -608,7 +608,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'6.2 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'6.3 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -778,7 +778,7 @@ function onboarding(locked) {
       <li>${icon('check')}<span>השינויים מתעדכנים בכל המכשירים</span></li>
     </ul>
     <div class="cta">
-    ${locked ? `<div class="assure">${icon('lock')}האפליקציה נעולה והנתונים מוסתרים</div><button class="btn big" data-act="unlockStart">כניסה</button>` : ready ? `<div class="assure">${icon('lock')}האפליקציה רואה רק את הגיליון שתבחרי</div><button class="btn big" data-act="start">כניסה עם גוגל</button><div class="hint" style="text-align:center;margin-top:var(--s3)">בפעם הראשונה האפליקציה תיצור לך גיליון תקציב. אם כבר יש לך, היא תמצא אותו.</div><button class="lnk" data-act="pick" style="margin-top:var(--s3)">בחירת גיליון קיים ידנית</button>${false && Auth.conf().templateId ? `<a class="btn o tplbtn" href="https://docs.google.com/spreadsheets/d/${esc(Auth.conf().templateId)}/copy" target="_blank" rel="noopener">${icon('file-copy')}<span><b>אין לי גיליון עדיין</b><small>יצירת עותק מהתבנית</small></span></a>` : ''}` : '<div class="banner err" style="margin:0;text-align:right"><i class="ri-error-warning-fill"></i><span>האפליקציה עדיין לא הוגדרה מול Google, ולכן אי אפשר להתחבר. למנהלת: ממלאים את <b>config.js</b> (README, "הגדרת Google").</span></div>'}
+    ${locked ? `<div class="assure">${icon('lock')}האפליקציה נעולה והנתונים מוסתרים</div><button class="btn big" data-act="unlockStart">כניסה</button>` : ready ? `<div class="assure">${icon('lock')}האפליקציה רואה רק את הגיליון שתבחרי</div><button class="btn big" data-act="start">כניסה עם גוגל</button><div class="hint" style="text-align:center;margin-top:var(--s3)">בפעם הראשונה האפליקציה תיצור לך גיליון תקציב. אם כבר יש לך, היא תמצא אותו.</div><button class="btn o" data-act="pick" style="margin-top:var(--s3)">בחירת גיליון קיים ידנית</button>${false && Auth.conf().templateId ? `<a class="btn o tplbtn" href="https://docs.google.com/spreadsheets/d/${esc(Auth.conf().templateId)}/copy" target="_blank" rel="noopener">${icon('file-copy')}<span><b>אין לי גיליון עדיין</b><small>יצירת עותק מהתבנית</small></span></a>` : ''}` : '<div class="banner err" style="margin:0;text-align:right"><i class="ri-error-warning-fill"></i><span>האפליקציה עדיין לא הוגדרה מול Google, ולכן אי אפשר להתחבר. למנהלת: ממלאים את <b>config.js</b> (README, "הגדרת Google").</span></div>'}
     ${S.error ? `<div class="hint" style="margin-top:var(--s3);color:var(--pt);text-align:center">${esc(S.error)}</div>` : ''}
     </div>
   </div>`;
