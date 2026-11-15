@@ -74,8 +74,8 @@
 
   async function meta(force) {
     if (!force && cache.meta) return cache.meta;
-    const j = await api('', { params: { fields: 'sheets.properties(sheetId,title)' } });
-    cache.meta = {};
+    const j = await api('', { params: { fields: 'properties.title,sheets.properties(sheetId,title)' } });
+    cache.meta = {}; cache.fileTitle = (j.properties && j.properties.title) || '';
     (j.sheets || []).forEach(s => { cache.meta[s.properties.title] = s.properties.sheetId; });
     return cache.meta;
   }
@@ -604,10 +604,11 @@
   async function migrate(o) {
     o = o || {};
     if (!o.oldId) throw new Error('חסר קובץ לקריאה');
-    const prev = cfg.sheetId; cfg.sheetId = o.oldId; cache = {};
-    let data;
+    const prev = cfg.sheetId, prevTok = cfg.getToken; cfg.sheetId = o.oldId; cache = {};
+    if (o.readToken) cfg.getToken = async () => o.readToken;   // הקובץ הישן נקרא בהרשאת קריאה בלבד (נפרדת מההרשאה של האפליקציה)
+    let data, fileTitle = '';
     try {
-      const m = await meta(true);
+      const m = await meta(true); fileTitle = cache.fileTitle || '';
       if (m[SHEETS.BUDGET] == null && m[SHEETS.ITEMS] == null) throw new Error('זה לא נראה כמו קובץ תקציב של האפליקציה');
       const hasLog = m[SHEETS.LOG] != null, hasSet = m[SHEETS.SETTINGS] != null;
       const ranges = [m[SHEETS.ITEMS] != null ? q(SHEETS.ITEMS) + '!A1:I500' : q(SHEETS.BUDGET) + '!A1:L400'];
@@ -625,7 +626,7 @@
           data.cells[mo] = { fixed: mod.fixed.list.map((_, i) => num(at(fa[i], 0))), variable: mod.variable.list.map((_, i) => vcN.map((_, w) => num(at(va[i], w)))) };
         }
       }
-    } finally { cfg.sheetId = prev; cache = {}; }
+    } finally { cfg.sheetId = prev; cfg.getToken = prevTok; cache = {}; }
     const d = data.d, num0 = x => (typeof x === 'number' && isFinite(x)) ? Math.round(x * 100) / 100 : 0, score = x => (typeof x === 'number' && x >= 1 && x <= 10) ? x : '';
     let items = [], income = [];
     if (data.v2) {
@@ -654,7 +655,7 @@
       });
     }
     let prefs = null; { const row = d.set[1]; try { prefs = row && row[4] ? JSON.parse(row[4]) : null; } catch (e) { prefs = null; } }
-    const summary = { income: income.length, fixed: items.filter(i => i.type === 'קבועה').length, variable: items.filter(i => i.type !== 'קבועה').length, withBudget: items.filter(i => i.budget > 0).length, entries: log.length, typed: summaryMig.n, skipped: skipped };
+    const summary = { income: income.length, fixed: items.filter(i => i.type === 'קבועה').length, variable: items.filter(i => i.type !== 'קבועה').length, withBudget: items.filter(i => i.budget > 0).length, entries: log.length, typed: summaryMig.n, skipped: skipped, title: fileTitle };
     if (o.dryRun) return { ok: true, summary: summary };
     let startDay = Number(o.startDay) || 0;
     if (!startDay && d.sum && d.sum[0]) { const row = d.sum[0]; for (let i = 0; i < row.length; i++) if (trim(row[i]).indexOf('חישוב חודש החל מיום') >= 0) { for (let j = i + 1; j < row.length; j++) if (typeof row[j] === 'number' && row[j] >= 1 && row[j] <= 28) { startDay = row[j]; break; } break; } }
