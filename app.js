@@ -188,18 +188,19 @@ function renderConn() {
     <p class="cn-sub">${done ? (c.empty ? 'הגיליון מוכן. השלב הבא: להגדיר בו את התקציב.' : 'מעכשיו כל הוצאה שמזינים נכנסת לגיליון, וכל שינוי בגיליון מופיע כאן.') : ''}</p></div>`;
 }
 
-async function connectFlow() {
-  const wait = ms => new Promise(r => setTimeout(r, ms));
-  S.conn = { step: 1, info: '' }; renderConn();
+async function connectFlow(quiet) {   // quiet: אחרי יצירת גיליון חדש אין מה "לחבר", רק טוענים בשקט (בלי מסך חיבור ובלי המתנות)
+  const wait = ms => new Promise(r => quiet ? r() : setTimeout(r, ms));
+  const R = () => { if (!quiet) renderConn(); };
+  S.conn = { step: 1, info: '' }; R();
   try {
     await Promise.all([call('ping'), wait(800)]);
-    S.conn.step = 2; renderConn();
+    S.conn.step = 2; R();
     const [b] = await Promise.all([call('budget', { rules: S.eomRules, decisions: S.decisions, deposits: S.deposits }), wait(900)]);
     const nv = b.variable.reduce((a, g) => a + g.items.length, 0), nf = b.fixed.reduce((a, g) => a + g.items.length, 0);
-    S.conn.empty = nv + nf === 0; S.conn.info = S.conn.empty ? 'עדיין בלי תקציב' : `${nv} שוטפות ו-${nf} קבועות`; S.conn.step = 3; renderConn();
+    S.conn.empty = nv + nf === 0; S.conn.info = S.conn.empty ? 'עדיין בלי תקציב' : `${nv} שוטפות ו-${nf} קבועות`; S.conn.step = 3; R();
     const [en] = await Promise.all([call('entries', { month: b.month }), wait(800)]);
     applyBudget(b); S.entries = en.entries; S.lastSync = Date.now(); LS.set('lastSync', S.lastSync); LS.set('cache', { b, en: en.entries });
-    S.conn.step = 4; renderConn(); await wait(1700);
+    S.conn.step = 4; R(); await wait(1700);
     S.conn = null; renderConn(); S.screen = 'home'; render();
   } catch (err) {
     S.conn = null; renderConn();
@@ -610,7 +611,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'9.1 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'9.2 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -749,10 +750,10 @@ async function wizCreate() {
     Bridge.configure({ sheetId: '', getToken: () => Auth.token() });
     const onProgress = (pct, msg) => { w.pct = Math.max(w.pct, pct); cap = Math.min(99, pct + 22); w.msg = msg; paint(); };
     const r = w.mig ? await Bridge.call('migrate', { oldId: w.mig.id, onProgress: onProgress }) : await Bridge.createFile({ startYm: w.startYm, months: w.months, onProgress: onProgress });
-    w.pct = 100; w.msg = 'הגיליון מוכן. מחברים את האפליקציה אליו…'; paint(); clearInterval(creep);
+    w.pct = 100; w.msg = 'הגיליון מוכן'; paint(); clearInterval(creep);
     S.cfg = { sheetId: r.id, sheetName: r.name }; LS.set('cfg', S.cfg); setupBridge();
-    S.wiz = null; S.needAuth = false; S.budgetCfg = null; S.error = null; S.newFileUrl = r.url;
-    await connectFlow(); flush();
+    S.needAuth = false; S.budgetCfg = null; S.error = null; S.newFileUrl = r.url;
+    await connectFlow(true); S.wiz = null; render(); flush();
     toast('הגיליון נוצר בדרייב שלך');
   } catch (err) { clearInterval(creep); w.busy = false; S.error = 'לא הצלחתי ליצור את הגיליון: ' + (err.message || err); render(); }
 }
