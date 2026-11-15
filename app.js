@@ -215,7 +215,7 @@ async function connectFlow() {
 async function pickSheet() {
   const c = Auth.conf();
   if (!Auth.ready() || !c.apiKey || !c.appId) { toast('חסרות הגדרות Google ב-config.js'); return; }
-  try { await Auth.signIn(); } catch (e) { toast('ההתחברות לא הושלמה'); return; }
+  try { if (!Auth.valid()) await Auth.signIn(); } catch (e) { toast('ההתחברות לא הושלמה'); return; }
   await new Promise(res => { if (window.gapi && gapi.load) gapi.load('picker', res); else setTimeout(res, 800); });
   if (!window.google || !google.picker) { toast('בורר הקבצים לא נטען, נסי שוב'); return; }
   const view = new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS).setMode(google.picker.DocsViewMode.LIST);
@@ -608,7 +608,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'7.7 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'7.8 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -732,7 +732,7 @@ function fileCards() {
 
 /* ---------- כניסה: מוצאים את הגיליון של המשתמשת, או יוצרים חדש ---------- */
 async function startFlow() {
-  try { await Auth.signIn(); } catch (e) { toast('ההתחברות לא הושלמה'); return; }
+  try { if (!Auth.valid()) await Auth.signIn(); } catch (e) { toast('ההתחברות לא הושלמה'); return; }   // כבר מחוברת: בלי חלון גוגל (באייפון הוא נפתח בדפדפן)
   let files = [];
   try { Bridge.configure({ sheetId: '', getToken: () => Auth.token() }); files = await Bridge.listFiles(); } catch (e) { files = []; }
   S.error = null;
