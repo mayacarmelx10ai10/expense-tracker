@@ -376,7 +376,7 @@ function renderCats() {
 function home() {
   const isVar = S.tab === 'var';
   const groups = sortedGroups(isVar ? S.data.variable : S.data.fixed, S.tab);
-  const total = groups.reduce((a, g) => a + g.items.reduce((x, i) => x + view(i, isVar).eff, 0), 0);   // כולל חוסרים מחודש קודם, כדי שהסכום יתאים למה שמוצג בכרטיסיות
+  const total = groups.reduce((a, g) => a + g.items.reduce((x, i) => x + i.budget, 0), 0);   // התקציב החודשי כמו שהוא, בלי גלגולים וחוסרים
   const cur = S.month === S.current.month;
   return `
   <div class="top"><span class="app">מעקב הוצאות עם מאיה<span id="sp">${syncPill()}</span></span>${isLive() ? `<button class="gb" data-act="lock" aria-label="יציאה מהתקציב">${icon('lock')}</button>` : ''}</div>
