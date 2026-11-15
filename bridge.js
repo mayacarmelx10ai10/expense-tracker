@@ -534,6 +534,13 @@
   /* ---------- יצירה, תיקון והתחלת שנה חדשה (הפורמט החדש) ---------- */
   const sheetUrl = id => 'https://sheets.googleapis.com/v4/spreadsheets/' + id;
   /* גיליון חדש בדרייב של המשתמשת: לשוניות, נוסחאות, עיצוב והגנות. דורש רק את ההרשאה הקיימת (drive.file). */
+  const HEB_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+  /* שם הקובץ בדרייב כולל את חודשי התקציב, כדי שיהיה קל למצוא ולהבדיל בין תקופות */
+  function fileTitle(startYm, months) {
+    const n = Math.max(1, Math.min(12, Number(months) || 12)), s0 = Math.floor(startYm / 100) * 12 + (startYm % 100) - 1, e0 = s0 + n - 1;
+    const lab = t => HEB_MONTHS[t % 12] + ' ' + Math.floor(t / 12);
+    return 'שיקוף תקציב - לעבודה עם אפליקציית ״הוצאות עם מאיה״ - ' + (n === 1 ? lab(s0) : lab(s0) + ' עד ' + lab(e0));
+  }
   async function createFile(o) {
     o = o || {};
     const W = wb(), now = cfg.now();
@@ -542,7 +549,7 @@
     const prog = (n, t) => { try { o.onProgress && o.onProgress(n, t); } catch (e) { /* התקדמות היא קישוט בלבד */ } };
     prog(8, 'בונה את מבנה הגיליון');
     const p = W.plan({ items: o.items, startYm: startYm, months: o.months, startDay: o.startDay, opening: o.opening, prefsJson: o.prefsJson });
-    const j = await api('https://sheets.googleapis.com/v4/spreadsheets', { method: 'POST', body: W.createBody(o.title || 'שיקוף תקציב - לעבודה עם אפליקציית ״הוצאות עם מאיה״', p) });
+    const j = await api('https://sheets.googleapis.com/v4/spreadsheets', { method: 'POST', body: W.createBody(o.title || fileTitle(startYm, o.months), p) });
     const id = j.spreadsheetId, base = sheetUrl(id);
     prog(30, 'כותבת את הקטגוריות והנוסחאות');
     await api(base + '/values:batchUpdate', { method: 'POST', body: { valueInputOption: 'USER_ENTERED', data: p.formulas } });
@@ -550,7 +557,7 @@
     await api(base + '/values:batchUpdate', { method: 'POST', body: { valueInputOption: 'RAW', data: p.raw } });
     prog(68, 'מעצבת ומוסיפה הגנות');
     await api(base + ':batchUpdate', { method: 'POST', body: { requests: W.formatRequests(p) } });
-    return { ok: true, id: id, name: (j.properties && j.properties.title) || o.title || 'שיקוף תקציב - לעבודה עם אפליקציית ״הוצאות עם מאיה״', url: j.spreadsheetUrl || ('https://docs.google.com/spreadsheets/d/' + id + '/edit'), months: p.months, startYm: startYm };
+    return { ok: true, id: id, name: (j.properties && j.properties.title) || o.title || fileTitle(startYm, o.months), url: j.spreadsheetUrl || ('https://docs.google.com/spreadsheets/d/' + id + '/edit'), months: p.months, startYm: startYm };
   }
   const swapIds = (x, map) => { if (Array.isArray(x)) return x.map(v => swapIds(v, map)); if (x && typeof x === 'object') { const o = {}; Object.keys(x).forEach(k => { o[k] = (k === 'sheetId' && map[x[k]] != null) ? map[x[k]] : swapIds(x[k], map); }); return o; } return x; };
   /* תיקון: כותב מחדש את נוסחאות הצפייה, העיצוב וההגנות. לא נוגע בתקציב, ביומן או בהגדרות. */
@@ -588,7 +595,7 @@
     const items = [];
     [['קבועה', mod.fixed.list, 'fixed:'], ['שוטפת', mod.variable.list, 'var:']].forEach(([type, list, pref]) => list.forEach(it => { if (!it.gone) items.push({ type: type, group: it.group, name: it.name, budget: it.budget, key: pref + it.n }); }));
     const pr = o.prefs ? Object.assign({}, o.prefs, { ts: cfg.now().getTime(), decisions: {}, deposits: {} }) : null;
-    const f = await createFile({ title: o.title || 'שיקוף תקציב - לעבודה עם אפליקציית ״הוצאות עם מאיה״ ' + (startYm % 100 >= 1 ? Math.floor(startYm / 100) : ''), items: items, startYm: startYm, months: 12, startDay: mod.startDay, opening: opening, prefsJson: pr ? JSON.stringify(pr) : '' });
+    const f = await createFile({ title: o.title, items: items, startYm: startYm, months: 12, startDay: mod.startDay, opening: opening, prefsJson: pr ? JSON.stringify(pr) : '' });
     f.opening = opening;
     return f;
   }

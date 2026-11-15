@@ -610,7 +610,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'8.6 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'8.7 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -712,7 +712,7 @@ async function wizCreate() {
   const creep = setInterval(() => { if (w.pct < cap - 1) { w.pct += (cap - w.pct) * 0.08; paint(); } }, 400);
   try {
     Bridge.configure({ sheetId: '', getToken: () => Auth.token() });
-    const r = await Bridge.createFile({ title: 'שיקוף תקציב - לעבודה עם אפליקציית ״הוצאות עם מאיה״', startYm: w.startYm, months: w.months,
+    const r = await Bridge.createFile({ startYm: w.startYm, months: w.months,
       onProgress: (pct, msg) => { w.pct = Math.max(w.pct, pct); cap = Math.min(99, pct + 22); w.msg = msg; paint(); } });
     w.pct = 100; w.msg = 'הגיליון מוכן'; paint(); clearInterval(creep); await new Promise(res => setTimeout(res, 500));
     S.cfg = { sheetId: r.id, sheetName: r.name }; LS.set('cfg', S.cfg); setupBridge();
