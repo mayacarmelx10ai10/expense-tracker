@@ -179,13 +179,13 @@ function renderConn() {
       <div class="cn-node">${SHEETS_ICON}</div>
       ${done ? '<div class="cn-check"><span>✓</span>' + [0, 1, 2, 3, 4, 5, 6, 7].map(i => `<i style="--a:${i * 45}deg"></i>`).join('') + '</div>' : ''}
     </div>
-    <h2>${done ? 'מחובר' : 'מחברים את התקציב…'}</h2>
+    <h2>${done ? 'מחובר' : 'מחברים את הגיליון…'}</h2>
     <ul class="cn-steps">
       <li class="${st(1)}"><b></b>מתחברים לגיליון</li>
-      <li class="${st(2)}"><b></b>קוראים את התקציב${c.info ? `<small>${esc(c.info)}</small>` : ''}</li>
+      <li class="${st(2)}"><b></b>${c.empty ? 'בודקים את הגיליון' : 'קוראים את התקציב'}${c.info ? `<small>${esc(c.info)}</small>` : ''}</li>
       <li class="${st(3)}"><b></b>מכינים את יומן ההוצאות</li>
     </ul>
-    <p class="cn-sub">${done ? 'מעכשיו כל הוצאה שמזינים נכנסת לגיליון, וכל שינוי בגיליון מופיע כאן.' : ''}</p></div>`;
+    <p class="cn-sub">${done ? (c.empty ? 'הגיליון מוכן. השלב הבא: להגדיר בו את התקציב.' : 'מעכשיו כל הוצאה שמזינים נכנסת לגיליון, וכל שינוי בגיליון מופיע כאן.') : ''}</p></div>`;
 }
 
 async function connectFlow() {
@@ -196,7 +196,7 @@ async function connectFlow() {
     S.conn.step = 2; renderConn();
     const [b] = await Promise.all([call('budget', { rules: S.eomRules, decisions: S.decisions, deposits: S.deposits }), wait(900)]);
     const nv = b.variable.reduce((a, g) => a + g.items.length, 0), nf = b.fixed.reduce((a, g) => a + g.items.length, 0);
-    S.conn.info = `${nv} שוטפות ו-${nf} קבועות`; S.conn.step = 3; renderConn();
+    S.conn.empty = nv + nf === 0; S.conn.info = S.conn.empty ? 'עדיין בלי תקציב' : `${nv} שוטפות ו-${nf} קבועות`; S.conn.step = 3; renderConn();
     const [en] = await Promise.all([call('entries', { month: b.month }), wait(800)]);
     applyBudget(b); S.entries = en.entries; S.lastSync = Date.now(); LS.set('lastSync', S.lastSync); LS.set('cache', { b, en: en.entries });
     S.conn.step = 4; renderConn(); await wait(1700);
@@ -610,7 +610,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'9.0 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'9.1 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
