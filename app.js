@@ -626,7 +626,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'9.3 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'9.4 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -724,7 +724,7 @@ function wizard() {
   <div class="wel wiz">
     <h2>ייבוא תקציב קיים</h2>
     <p>פתחי את הקובץ הקודם ב-Google Sheets, העתיקי את הקישור משורת הכתובת והדביקי כאן.</p>
-    <input id="migUrl" class="sel" type="url" dir="ltr" placeholder="https://docs.google.com/spreadsheets/d/…" autocomplete="off" style="width:100%;padding:14px;text-align:left">
+    <input id="migUrl" class="sel" type="text" dir="ltr" placeholder="https://docs.google.com/spreadsheets/d/…" autocomplete="off" value="${esc(w.url || '')}" oninput="S.wiz.url = this.value" onpaste="setTimeout(() => { S.wiz.url = this.value; }, 0)" style="width:100%;padding:14px;text-align:left">
     <p class="sp small">גוגל תבקש הרשאה לקריאה בלבד של הקובץ. הקובץ הקודם לא ישתנה.</p>
     ${S.error ? `<div class="hint" style="color:var(--pt)">${esc(S.error)}</div>` : ''}
     <button class="btn big" data-act="migLoad">המשך</button>
@@ -747,7 +747,8 @@ function wizard() {
   <div class="foot">גרסה <span class="num">${APP_VERSION}</span></div></div>`;
 }
 async function migLoad() {
-  const w = S.wiz, inp = document.getElementById('migUrl'), m = inp && /\/d\/([\w-]{20,})/.exec(inp.value || '');
+  const w = S.wiz, inp = document.getElementById('migUrl'), val = (inp && inp.value) || w.url || '', m = /\/d\/([\w-]{20,})/.exec(val);
+  if (!val.trim()) { S.error = 'השדה ריק. הדביקי את הקישור לקובץ הקודם.'; render(); return; }
   if (!m) { S.error = 'לא זיהיתי קישור של Google Sheets. פתחי את הקובץ הקודם, והעתיקי את הקישור משורת הכתובת.'; render(); return; }
   const id = m[1];
   try { await Auth.requestRead(); } catch (e) { S.error = 'ההרשאה לקריאת הקובץ לא ניתנה.'; render(); return; }
