@@ -228,7 +228,11 @@ async function pickSheet() {
     }).build().setVisible(true);
 }
 
+const monthSeq = () => (S.ord && S.ord.length ? S.ord : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+const prevMonth = () => { const q = monthSeq(), i = q.indexOf(S.month); return i > 0 ? q[i - 1] : null; };
+const nextMonth = () => { const q = monthSeq(), i = q.indexOf(S.month); return i >= 0 && i < q.length - 1 ? q[i + 1] : null; };
 function applyBudget(b) {
+  S.ord = b.order || null; S.fmt = b.format || 1; S.ended = !!b.ended;
   S.ym = b.ym || 0; S.curYm = b.currentYm || 0; if (S.curYm && !LS.get('seenYm', 0)) LS.set('seenYm', S.curYm);   // התקנה ראשונה: בלי התרעה
   S.firstMonth = b.firstMonth || 0; S.month = b.month; S.startDay = b.startDay; S.current = { month: b.currentMonth, week: b.currentWeek };
   S.data = { fixed: b.fixed, variable: b.variable };
@@ -326,12 +330,13 @@ function newMonthNotice() {
   if (!isLive() || !S.curYm || S.ym !== S.curYm || S.month === S.firstMonth) return '';
   const seen = LS.get('seenYm', 0);
   if (!seen || seen >= S.curYm) return '';
-  const prev = S.month === 1 ? 12 : S.month - 1;
+  const prev = prevMonth() || (S.month === 1 ? 12 : S.month - 1);
   return `<div class="banner soft"><i class="ri-calendar-event-fill"></i><span>סיכום ${MONTHS[prev - 1]} מחכה לך</span><button class="go" data-act="summaryPrev">לסיכום</button><button class="x" data-act="dismissNew" aria-label="סגירה">${icon('close')}</button></div>`;
 }
 function banners() {
   let h = newVersionNotice() + newMonthNotice();
   if (!isLive() && DEV) h += `<div class="banner urgent"><i class="ri-link-unlink"></i><span><b>לא מחובר לגיליון</b></span><button class="go" data-act="pick">להתחבר לגיליון</button></div>`;
+  if (S.ended && isLive()) h += `<div class="banner soft"><i class="ri-calendar-event-fill"></i><span><b>תקופת הגיליון הסתיימה</b></span><button class="go" data-act="settings">לפתיחת גיליון חדש</button></div>`;
   if (S.needAuth) h += `<div class="banner urgent"><i class="ri-link-unlink"></i><span><b>לא מחובר לגיליון</b></span><button class="go" data-act="signin">להתחבר לגיליון</button></div>`;
   if (S.pending.length) h += `<div class="banner"><i class="ri-cloud-off-fill"></i><span><b>${S.pending.length} הוצאות ממתינות</b> לסנכרון עם הגיליון.</span><button class="go" data-act="retry">נסי שוב</button></div>`;
   if (S.error) h += `<div class="banner err"><i class="ri-error-warning-fill"></i><span>${esc(S.error)}</span><button class="go" data-act="retry">נסי שוב</button></div>`;
@@ -386,9 +391,9 @@ function home() {
   const cur = S.month === S.current.month;
   return `
   <div class="top"><span class="app">מעקב הוצאות עם מאיה<span id="sp">${syncPill()}</span></span>${isLive() ? `<button class="gb" data-act="lock" aria-label="יציאה מהתקציב">${icon('lock')}</button>` : ''}</div>
-  <div class="mt ${showSummary() ? 'hs' : ''}"><button class="st" data-act="prev" ${S.month <= 1 ? 'disabled' : ''} aria-label="חודש קודם">${icon('arrow-right-s')}</button>
-    <b>${MONTHS[S.month - 1] || ''} ${new Date().getFullYear()}</b>
-    <button class="st" data-act="next" ${S.month >= 12 ? 'disabled' : ''} aria-label="חודש הבא">${icon('arrow-left-s')}</button>
+  <div class="mt ${showSummary() ? 'hs' : ''}"><button class="st" data-act="prev" ${prevMonth() ? '' : 'disabled'} aria-label="חודש קודם">${icon('arrow-right-s')}</button>
+    <b>${MONTHS[S.month - 1] || ''} ${S.ym ? Math.floor(S.ym / 100) : new Date().getFullYear()}</b>
+    <button class="st" data-act="next" ${nextMonth() ? '' : 'disabled'} aria-label="חודש הבא">${icon('arrow-left-s')}</button>
     ${showSummary() ? `<button class="sumbtn" data-act="summary">${icon('file-list-3')}סיכום ${S.curYm && S.ym < S.curYm ? (MONTHS[S.month - 1] || 'חודש') : 'החודש'}</button>` : ''}</div>
   ${banners()}
   ${searchField('hq', 'חיפוש לפי סעיף, תגית או הערה', S.q, 'clearQ')}
@@ -583,6 +588,8 @@ function settings() {
     <div class="brow"><button class="btn sm" data-act="lock">יציאה מהתקציב</button><button class="btn sm o" data-act="pinSetup">${PIN.get() ? 'שינוי קוד' : 'הגדרת קוד'}</button>${PIN.get() ? '<button class="btn sm danger" data-act="pinRemove">הסרת קוד</button>' : ''}</div>
   </section>` : ''}
 
+  ${live ? fileCards() : ''}
+
   <section class="sc2">
     <div class="sh2">${icon('table')}<b>עמודת התקציב</b></div>
     ${budgetBlock()}
@@ -601,7 +608,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'5.6 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'6.0 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -674,6 +681,57 @@ function budgetBlock() {
     <button class="btn sm" data-act="saveCol">שמירה</button>`;
 }
 
+
+/* ---------- אשף: יצירת גיליון תקציב חדש ---------- */
+function wizYms() { const n = new Date(), out = []; for (let i = -1; i < 6; i++) { const d = new Date(n.getFullYear(), n.getMonth() + i, 1); out.push(d.getFullYear() * 100 + d.getMonth() + 1); } return out; }
+function wizard() {
+  const w = S.wiz, yms = wizYms(), cur = new Date().getFullYear() * 100 + new Date().getMonth() + 1;
+  const end = (() => { const s = w.startYm, t = (s % 100) - 1 + w.months - 1; return (Math.floor(s / 100) + Math.floor(t / 12)) * 100 + (t % 12) + 1; })();
+  return `<div class="top"><span class="app">מעקב הוצאות עם מאיה</span></div>
+  <div class="wel wiz">
+    <h2>יצירת גיליון תקציב</h2>
+    <p>האפליקציה תיצור בגוגל דרייב שלך גיליון חדש, עם הסעיפים הנפוצים. בגיליון כותבים את התקציב ורואים את ההוצאות לאורך זמן.</p>
+    <label class="lab">מאיזה חודש מתחיל התקציב?</label>
+    <div class="selw"><select id="wizStart" class="sel">${yms.map(y => `<option value="${y}" ${y === w.startYm ? 'selected' : ''}>${MONTHS[(y % 100) - 1]} ${Math.floor(y / 100)}${y === cur ? ' (החודש)' : ''}</option>`).join('')}</select></div>
+    <label class="lab">לכמה חודשים?</label>
+    <div class="selw"><select id="wizMonths" class="sel">${[12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(m => `<option value="${m}" ${m === w.months ? 'selected' : ''}>${m} חודשים</option>`).join('')}</select></div>
+    <p class="sp">התקופה: ${MONTHS[(w.startYm % 100) - 1]} ${Math.floor(w.startYm / 100)} עד ${MONTHS[(end % 100) - 1]} ${Math.floor(end / 100)}.</p>
+    <div class="hint" style="margin:var(--s3) 0">המקסימום בגיליון אחד הוא 12 חודשים, כדי שהיומן יישאר קטן ומהיר. כשהתקופה מסתיימת, האפליקציה מציעה לפתוח גיליון חדש, והיתרות עוברות אליו.</div>
+    ${S.error ? `<div class="hint" style="color:var(--pt)">${esc(S.error)}</div>` : ''}
+    <button class="btn big" data-act="wizCreate" ${w.busy ? 'disabled' : ''}>${w.busy ? 'יוצרת את הגיליון…' : 'יצירת הגיליון'}</button>
+    <button class="lnk" data-act="wizCancel" style="margin-top:var(--s3)">חזרה</button>
+  </div>`;
+}
+async function wizCreate() {
+  const w = S.wiz; if (w.busy) return;
+  try { await Auth.signIn(); } catch (e) { toast('ההתחברות לא הושלמה'); return; }
+  w.busy = true; S.error = null; render();
+  try {
+    Bridge.configure({ sheetId: '', getToken: () => Auth.token() });
+    const r = await Bridge.createFile({ title: 'מעקב הוצאות', startYm: w.startYm, months: w.months });
+    S.cfg = { sheetId: r.id, sheetName: r.name }; LS.set('cfg', S.cfg); setupBridge();
+    S.wiz = null; S.needAuth = false; S.budgetCfg = null; S.error = null; S.newFileUrl = r.url;
+    await connectFlow(); flush();
+    toast('הגיליון נוצר. אפשר לכתוב בו את התקציב');
+  } catch (err) { w.busy = false; S.error = 'לא הצלחתי ליצור את הגיליון: ' + (err.message || err); render(); }
+}
+
+
+function fileCards() {
+  const c = S.budgetCfg; if (!c || c.format !== 2) return '';
+  const sheetUrl = 'https://docs.google.com/spreadsheets/d/' + S.cfg.sheetId + '/edit';
+  return `<section class="sc2">
+    <div class="sh2">${icon('calendar-2')}<b>תקופת התקציב</b></div>
+    <p class="sp">${ymLabel(c.startYm)} ${Math.floor(c.startYm / 100)} עד ${ymLabel(c.endYm)} ${Math.floor(c.endYm / 100)} (${c.months} חודשים).${c.ended ? '<br><b>התקופה הסתיימה.</b> כדי להמשיך פותחים גיליון חדש, והיתרות עוברות אליו.' : ''}</p>
+    <div class="brow"><a class="btn sm o" href="${esc(sheetUrl)}" target="_blank" rel="noopener">פתיחת הגיליון</a><button class="btn sm ${c.ended ? '' : 'o'}" data-act="newYear">${c.ended ? 'פתיחת גיליון חדש' : 'התחלת תקופה חדשה'}</button></div>
+  </section>
+  <section class="sc2">
+    <div class="sh2">${icon('tools')}<b>תיקון הגיליון</b></div>
+    <p class="sp">אם נמחקו בטעות נוסחאות או לשוניות בגיליון, הכפתור משחזר אותן. הנתונים וההוצאות לא נפגעים.</p>
+    <button class="btn sm o" data-act="repair">תיקון הגיליון</button>
+  </section>`;
+}
+
 const SHEETS_ICON = '<svg viewBox="0 0 40 52" width="56" height="72" aria-hidden="true"><path d="M4 0h20l16 16v32a4 4 0 0 1-4 4H4a4 4 0 0 1-4-4V4a4 4 0 0 1 4-4z" fill="#23A566"/><path d="M24 0l16 16H28a4 4 0 0 1-4-4z" fill="#188038"/><rect x="9" y="25" width="22" height="16" rx="1.5" fill="#fff"/><path d="M9 30.5h22M9 35.5h22M17.5 25v16" stroke="#23A566" stroke-width="1.6" fill="none"/></svg>';
 function onboarding(locked) {
   const ready = Auth.ready();
@@ -698,7 +756,7 @@ function onboarding(locked) {
       <li>${icon('check')}<span>השינויים מתעדכנים בכל המכשירים</span></li>
     </ul>
     <div class="cta">
-    ${locked ? `<div class="assure">${icon('lock')}האפליקציה נעולה והנתונים מוסתרים</div><button class="btn big" data-act="unlockStart">כניסה</button>` : ready ? `<div class="assure">${icon('lock')}האפליקציה רואה רק את הגיליון שתבחרי</div><button class="btn big" data-act="pick">התחברות עם גוגל</button>${Auth.conf().templateId ? `<a class="btn o tplbtn" href="https://docs.google.com/spreadsheets/d/${esc(Auth.conf().templateId)}/copy" target="_blank" rel="noopener">${icon('file-copy')}<span><b>אין לי גיליון עדיין</b><small>יצירת עותק מהתבנית</small></span></a>` : ''}` : '<div class="banner err" style="margin:0;text-align:right"><i class="ri-error-warning-fill"></i><span>האפליקציה עדיין לא הוגדרה מול Google, ולכן אי אפשר להתחבר. למנהלת: ממלאים את <b>config.js</b> (README, "הגדרת Google").</span></div>'}
+    ${locked ? `<div class="assure">${icon('lock')}האפליקציה נעולה והנתונים מוסתרים</div><button class="btn big" data-act="unlockStart">כניסה</button>` : ready ? `<div class="assure">${icon('lock')}האפליקציה רואה רק את הגיליון שתבחרי</div><button class="btn big" data-act="wizStart">יצירת גיליון תקציב חדש</button><button class="btn o" data-act="pick" style="margin-top:var(--s3)">יש לי גיליון, התחברות עם גוגל</button>${false && Auth.conf().templateId ? `<a class="btn o tplbtn" href="https://docs.google.com/spreadsheets/d/${esc(Auth.conf().templateId)}/copy" target="_blank" rel="noopener">${icon('file-copy')}<span><b>אין לי גיליון עדיין</b><small>יצירת עותק מהתבנית</small></span></a>` : ''}` : '<div class="banner err" style="margin:0;text-align:right"><i class="ri-error-warning-fill"></i><span>האפליקציה עדיין לא הוגדרה מול Google, ולכן אי אפשר להתחבר. למנהלת: ממלאים את <b>config.js</b> (README, "הגדרת Google").</span></div>'}
     ${S.error ? `<div class="hint" style="margin-top:var(--s3);color:var(--pt);text-align:center">${esc(S.error)}</div>` : ''}
     </div>
   </div>`;
@@ -707,6 +765,7 @@ function onboarding(locked) {
 function render() {
   const a = $('#app');
   if (S.locked && isLive()) { a.innerHTML = lockScreen(); return; }
+  if (S.wiz) { a.innerHTML = wizard(); return; }
   if (!isLive() && !DEV) { a.innerHTML = onboarding(); return; }
   if (S.screen === 'pinsetup') { a.innerHTML = pinSetupScreen(); return; }
   a.innerHTML = S.screen === 'detail' ? detail() : S.screen === 'settings' ? settings() : S.screen === 'eom' ? eomScreen() : S.screen === 'summary' ? summaryScreen() : home();
@@ -828,9 +887,29 @@ async function act(a, t) {
   switch (a) {
     case 'tab': S.tab = v; render(); break;
     case 'period': S.period = v; render(); break;
-    case 'prev': load(S.month - 1); break;
-    case 'next': load(S.month + 1); break;
+    case 'prev': if (prevMonth()) load(prevMonth()); break;
+    case 'next': if (nextMonth()) load(nextMonth()); break;
     case 'open': S.detailKey = k; S.screen = 'detail'; window.scrollTo(0, 0); render(); break;
+    case 'wizStart': S.wiz = { startYm: new Date().getFullYear() * 100 + new Date().getMonth() + 1, months: 12, busy: false }; S.error = null; window.scrollTo(0, 0); render(); break;
+    case 'wizCancel': S.wiz = null; S.error = null; render(); break;
+    case 'wizCreate': wizCreate(); break;
+    case 'repair': {
+      if (!confirm('לשחזר את הנוסחאות, ההגנות והלשוניות בגיליון?')) break;
+      try { await call('repair'); toast('הגיליון תוקן'); } catch (err) { toast('התיקון לא הצליח: ' + err.message); }
+      break;
+    }
+    case 'newYear': {
+      if (!confirm('לפתוח גיליון חדש שממשיך מהחודש שאחרי סוף התקופה? הסעיפים, התקציב וההעדפות יועתקו, והיתרות יעברו לפי כללי סוף החודש. הגיליון הנוכחי לא ישתנה.')) break;
+      try {
+        toast('פותחת גיליון חדש…');
+        const r = await call('newYear', { rules: S.eomRules, decisions: S.decisions, deposits: S.deposits, prefs: prefsNow() });
+        S.cfg = { sheetId: r.id, sheetName: r.name }; LS.set('cfg', S.cfg); setupBridge();
+        S.decisions = {}; S.deposits = {}; LS.set('decisions', S.decisions); LS.set('deposits', S.deposits);
+        S.budgetCfg = null; S.error = null; await connectFlow(); S.screen = 'settings'; render();
+        toast('הגיליון החדש מוכן');
+      } catch (err) { toast('לא הצלחתי לפתוח גיליון חדש: ' + err.message); }
+      break;
+    }
     case 'tgacc': S.unspOpen = !S.unspOpen; render(); break;
     case 'back': case 'home': S.screen = 'home'; render(); break;
     case 'settings':
@@ -839,7 +918,7 @@ async function act(a, t) {
       break;
     case 'summary': S.screen = 'summary'; window.scrollTo(0, 0); render(); break;
     case 'dismissNew': LS.set('seenYm', S.curYm); render(); break;
-    case 'summaryPrev': LS.set('seenYm', S.curYm); await load(S.month === 1 ? 12 : S.month - 1); S.screen = 'summary'; window.scrollTo(0, 0); render(); break;
+    case 'summaryPrev': LS.set('seenYm', S.curYm); await load(prevMonth() || (S.month === 1 ? 12 : S.month - 1)); S.screen = 'summary'; window.scrollTo(0, 0); render(); break;
     case 'depo': { (S.deposits[S.ym] = S.deposits[S.ym] || {})[k] = { amt: Number(v), day: nowDay(), at: Date.now() }; LS.set('deposits', S.deposits); touchPrefs(); reloadSoon(); render(); break; }
     case 'undepo': if (S.deposits[S.ym]) { delete S.deposits[S.ym][k]; LS.set('deposits', S.deposits); touchPrefs(); reloadSoon(); render(); } break;
     case 'decide': (S.decisions[S.ym] = S.decisions[S.ym] || {})[k] = v; LS.set('decisions', S.decisions); touchPrefs(); reloadSoon(); render(); break;
@@ -944,3 +1023,10 @@ function hideSplash() {
 }
 setTimeout(hideSplash, 8000);   // רשת בטחון
 if (S.locked && isLive()) { render(); hideSplash(); } else { if (S.locked) { S.locked = false; LS.set('locked', false); } load().then(() => { hideSplash(); if (isLive()) flush(); }); }
+
+document.addEventListener('change', e => {
+  if (!S.wiz) return;
+  if (e.target.id === 'wizStart') S.wiz.startYm = Number(e.target.value);
+  if (e.target.id === 'wizMonths') S.wiz.months = Number(e.target.value);
+  render();
+});
