@@ -632,7 +632,7 @@ function settings() {
 
   <section class="sc2">
     <div class="sh2">${icon('lock')}<b>נעילה וקוד</b></div>
-    <p class="sp"><b>קוד:</b> ${hasPin ? 'מבקשים אותו בכל כניסה לאפליקציה במכשיר הזה.' : 'קוד קצר שמבקשים בכל כניסה לאפליקציה במכשיר הזה. בלעדיו, מי שמחזיק במכשיר המחובר לגוגל יכול להיכנס.'}<br><b>יציאה מהתקציב:</b> נועלת את האפליקציה עכשיו ומסתירה את הנתונים. הגיליון נשאר מחובר, וחוזרים פנימה עם ${hasPin ? 'הקוד' : 'גוגל'}.</p>
+    <p class="sp"><b>קוד:</b> ${hasPin ? 'מבקשים אותו בכל כניסה לאפליקציה במכשיר הזה.' : 'קוד קצר שמבקשים בכל כניסה לאפליקציה במכשיר הזה. בלעדיו, מי שמחזיק במכשיר המחובר לגוגל יכול להיכנס.'}</p><p class="sp"><b>יציאה מהתקציב:</b> נועלת את האפליקציה עכשיו ומסתירה את הנתונים. הגיליון נשאר מחובר, וחוזרים פנימה עם ${hasPin ? 'הקוד' : 'גוגל'}.</p>
     <div class="brow"><button class="btn sm" data-act="lock">יציאה מהתקציב</button><button class="btn sm o" data-act="pinSetup">${hasPin ? 'שינוי קוד' : 'הגדרת קוד'}</button>${hasPin ? '<button class="btn sm danger" data-act="pinRemove">הסרת קוד</button>' : ''}</div>
   </section>
 
@@ -661,7 +661,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'9.9 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'10.0 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
