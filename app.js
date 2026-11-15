@@ -610,7 +610,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'8.5 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'8.6 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -770,7 +770,7 @@ function emptyGuide() {
     ['refresh', 'חזרי לאפליקציה', 'משכי למטה לרענון. הסעיפים שהגדרת להם תקציב יופיעו כאן.']
   ];
   return `<div class="guide"><div class="gh"><b>התקציב עדיין לא הוגדר</b><span>מומלץ להגדיר את התקציב במחשב.</span></div>
-    <div class="gname"><div class="gtag">${SHEETS_ICON.replace('width="56" height="72"', 'width="18" height="23"')}<span>הגיליון שלך נשמר בדרייב בשם:</span></div><b>${esc(S.cfg.sheetName || '')}</b><small>חפשי אותו בדרייב לפי השם הזה.</small></div>
+    <div class="gname"><div class="gtag">${SHEETS_ICON.replace('width="56" height="72"', 'width="18" height="23"')}<span>הגיליון שלך נשמר בדרייב בשם:</span></div><b>${esc(S.cfg.sheetName || '')}</b></div>
     <ol class="steps">${steps.map((t, i) => `<li><span class="sn">${i + 1}</span><div class="sb"><div class="st1"><b>${t[1]}</b></div><p>${t[2]}</p>${i === 0 ? `<button class="btn sm o gcopy" data-act="copyLink" data-k="${esc(url)}">${icon('links')}העתקת קישור לפתיחה במחשב</button>` : ''}</div></li>`).join('')}</ol></div>`;
 }
 
