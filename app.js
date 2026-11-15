@@ -276,13 +276,17 @@ function sortedGroups(groups, tab) {
 }
 function view(item, isVar) {
   const wk = isVar && S.period === 'week' && S.month === S.current.month;
-  const weekly = Math.max(0, Math.round((item.budget + (item.carry || 0)) / 4.3));   // השבועי כולל את הגלגול מהחודש הקודם
+  /* תצוגת שבוע: מה שנשאר מהחודש מתחלק שווה בשווה בין השבועות שנותרו (כולל הנוכחי).
+     שבוע עם קנייה גדולה מקטין את מה שנשאר לשבועות הבאים, ואם החודש בחריגה, גם השבוע מראה את החריגה. */
+  const monthLeft = item.budget + (item.carry || 0) - item.spent;
+  const wkSpent = isVar ? ((item.weeks || [])[S.current.week] || 0) : 0, k = Math.max(1, ((item.weeks || []).length || 5) - S.current.week);
+  const allow = (monthLeft + wkSpent) / k;                         // מה שהיה אפשר להוציא החודש בשבוע הזה, בתחילתו
+  const weekly = Math.max(0, Math.round(allow));
   const carry = wk ? 0 : (item.carry || 0), planned = wk ? weekly : item.budget;
-  const eff = planned + carry, budget = Math.max(0, eff), spent = wk ? (item.weeks[S.current.week] || 0) : item.spent;
+  const eff = planned + carry, budget = Math.max(0, eff), spent = wk ? wkSpent : item.spent;
   const p = budget > 0 ? spent / budget : (spent > 0 ? 2 : 0);
-  // בתצוגת שבוע, מה שנשאר לא יכול להיות יותר ממה שנשאר לחודש כולו: אם החודש בחריגה, גם השבוע מראה חריגה
-  const left = wk ? Math.min(eff - spent, item.budget + (item.carry || 0) - item.spent) : eff - spent;
-  const st = (p > 1.0000001 || left < -0.005) ? 'over' : (isVar && p >= 0.8 && p < 1) ? 'warn' : 'ok';
+  const left = wk ? (monthLeft < 0 ? monthLeft : Math.max(0, Math.min(allow - wkSpent, monthLeft))) : eff - spent;   // חריגה שבועית בלבד לא הופכת לחריגה: היא מקטינה את מה שנשאר לשבועות הבאים
+  const st = wk ? (left < -0.005 ? 'over' : p >= 0.8 ? 'warn' : 'ok') : (p > 1.0000001 || left < -0.005) ? 'over' : (isVar && p >= 0.8 && p < 1) ? 'warn' : 'ok';
   return { budget, eff, spent, p, st, carry, planned, left };
 }
 const tagsFor = key => { const set = new Set(S.tags[key] || []); S.entries.filter(e => e.key === key).forEach(e => (e.tags || []).forEach(t => set.add(t))); return [...set]; };
