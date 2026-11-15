@@ -608,7 +608,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'8.0 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'8.1 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -716,7 +716,7 @@ async function wizCreate() {
     S.cfg = { sheetId: r.id, sheetName: r.name }; LS.set('cfg', S.cfg); setupBridge();
     S.wiz = null; S.needAuth = false; S.budgetCfg = null; S.error = null; S.newFileUrl = r.url;
     await connectFlow(); flush();
-    toast('הגיליון נוצר. אפשר לכתוב בו את התקציב');
+    toast('הגיליון נוצר בדרייב שלך');
   } catch (err) { clearInterval(creep); w.busy = false; S.error = 'לא הצלחתי ליצור את הגיליון: ' + (err.message || err); render(); }
 }
 
@@ -768,6 +768,7 @@ function emptyGuide() {
     ['refresh', 'חזרי לאפליקציה', 'משכי למטה לרענון. הסעיפים שהגדרת להם תקציב יופיעו כאן.']
   ];
   return `<div class="guide"><div class="gh"><b>התקציב עדיין לא הוגדר</b><span>מומלץ להגדיר את התקציב במחשב.</span></div>
+    <div class="gname">${icon('folder-3')}<div><small>שם הגיליון ב-Google Drive</small><b>${esc(S.cfg.sheetName || '')}</b></div></div>
     <ol class="steps">${steps.map((t, i) => `<li><span class="sn">${i + 1}</span><div class="sb"><div class="st1">${icon(t[0])}<b>${t[1]}</b></div><p>${t[2]}</p></div></li>`).join('')}</ol>
     <div class="brow"><a class="btn sm" href="${esc(url)}" target="_blank" rel="noopener">פתיחת הגיליון</a><button class="btn sm o" data-act="copyLink" data-k="${esc(url)}">העתקת הקישור</button></div></div>`;
 }
