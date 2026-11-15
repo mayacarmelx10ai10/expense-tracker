@@ -165,7 +165,7 @@
 
   /* ---------- הפורמט החדש: האפליקציה קוראת רק לשוניות קלט (התקציב, היומן, ההגדרות) ולא תאי נוסחה ---------- */
   async function model2() {
-    const v = await batchVals([q(SHEETS.ITEMS) + '!A2:E500', q(SHEETS.SETTINGS) + '!A2:C60']);
+    const v = await batchVals([q(SHEETS.ITEMS) + '!A2:F500', q(SHEETS.SETTINGS) + '!A2:C60']);
     const settingsRows = v[1], setting = name => { const r = settingsRows.find(x => trim(x[0]) === name); return r ? r[1] : undefined; };
     const startYm = Number(setting('startYm')) || (cfg.now().getFullYear() * 100 + cfg.now().getMonth() + 1);
     const months = Math.max(1, Math.min(12, Number(setting('months')) || 12));
@@ -174,6 +174,7 @@
     let nextN = { fixed: 0, variable: 0 }, missing = [];
     rows.forEach((r, i) => {
       const type = trim(r[0]), name = trim(r[2]); if (!type || !name) return;
+      if (type !== 'קבועה' && type !== 'שוטפת' && type !== 'משתנה') return;   // הכנסות וכותרות מדורים: לא סעיפי הוצאה
       const isVar = type === 'שוטפת' || type === 'משתנה';
       const k = /^(fixed|var):(\d+)$/.exec(String(r[4] || ''));
       if (k) nextN[isVar ? 'variable' : 'fixed'] = Math.max(nextN[isVar ? 'variable' : 'fixed'], Number(k[2]) + 1);
@@ -552,8 +553,8 @@
   async function repair() {
     cache.model = null;
     const mod = await model(); if (!mod.v2) throw new Error('התיקון מיועד לקובץ בפורמט החדש');
-    const W = wb(), rows = await getVals(q(SHEETS.ITEMS) + '!A2:E500');
-    const items = []; rows.forEach((r, i) => { const t = trim(r[0]), n = trim(r[2]); if (!t || !n) return; items.push({ type: t === 'קבועה' ? 'קבועה' : 'שוטפת', group: trim(r[1]), name: n, budget: num(r[3]), key: String(r[4] || ''), row: i + 2 }); });
+    const W = wb(), rows = await getVals(q(SHEETS.ITEMS) + '!A2:F500');
+    const items = []; rows.forEach((r, i) => { const t = trim(r[0]), n = trim(r[2]); if (!t || !n) return; if (t !== 'קבועה' && t !== 'שוטפת' && t !== 'משתנה') return; items.push({ type: t === 'קבועה' ? 'קבועה' : 'שוטפת', group: trim(r[1]), name: n, budget: num(r[3]), key: String(r[4] || ''), row: i + 2 }); });
     const p = W.repairPlan(items, mod.startYm, mod.months);
     let m = await meta(true);
     const adds = p.sheets.filter(s => m[s[1]] == null).map(s => ({ addSheet: { properties: { title: s[1], rightToLeft: true } } }));
@@ -561,7 +562,7 @@
     const map = {}; p.sheets.forEach(s => { map[s[0]] = m[s[1]]; });
     const info = await api('', { params: { fields: 'sheets.protectedRanges.protectedRangeId' } });
     const dels = []; (info.sheets || []).forEach(s => (s.protectedRanges || []).forEach(r => dels.push({ deleteProtectedRange: { protectedRangeId: r.protectedRangeId } })));
-    await api('/values:batchClear', { method: 'POST', body: { ranges: [q(W.T.VAR) + '!A1:DZ300', q(W.T.FIXED) + '!A1:DZ300', q(W.T.ITEMS) + '!G1:H12'] } });
+    await api('/values:batchClear', { method: 'POST', body: { ranges: [q(W.T.VAR) + '!A1:DZ300', q(W.T.FIXED) + '!A1:DZ300', q(W.T.ITEMS) + '!G1:I30'] } });
     await api('/values:batchUpdate', { method: 'POST', body: { valueInputOption: 'USER_ENTERED', data: p.formulas } });
     await api('/values:batchUpdate', { method: 'POST', body: { valueInputOption: 'RAW', data: p.raw } });
     const reqs = swapIds(W.formatRequests(p), map);
