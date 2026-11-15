@@ -165,26 +165,25 @@
 
   /* ---------- הפורמט החדש: האפליקציה קוראת רק לשוניות קלט (התקציב, היומן, ההגדרות) ולא תאי נוסחה ---------- */
   async function model2() {
-    const v = await batchVals([q(SHEETS.ITEMS) + '!A2:F500', q(SHEETS.SETTINGS) + '!A2:C60']);
+    const v = await batchVals([q(SHEETS.ITEMS) + '!A1:H500', q(SHEETS.SETTINGS) + '!A2:C60']);
     const settingsRows = v[1], setting = name => { const r = settingsRows.find(x => trim(x[0]) === name); return r ? r[1] : undefined; };
     const startYm = Number(setting('startYm')) || (cfg.now().getFullYear() * 100 + cfg.now().getMonth() + 1);
     const months = Math.max(1, Math.min(12, Number(setting('months')) || 12));
     const startDay = Math.max(1, Math.min(28, Number(setting('startDay')) || 1));
-    const rows = v[0], lists = { fixed: [], variable: [] }, keyed = [];
+    const parsed = wb().parseItems(v[0]), lists = { fixed: [], variable: [] }, keyed = [];
     let nextN = { fixed: 0, variable: 0 }, missing = [];
-    rows.forEach((r, i) => {
-      const type = trim(r[0]), name = trim(r[2]); if (!type || !name) return;
-      if (type !== 'קבועה' && type !== 'שוטפת' && type !== 'משתנה') return;   // הכנסות וכותרות מדורים: לא סעיפי הוצאה
-      const isVar = type === 'שוטפת' || type === 'משתנה';
-      const k = /^(fixed|var):(\d+)$/.exec(String(r[4] || ''));
+    parsed.items.forEach(pi => {
+      const isVar = pi.type === 'שוטפת';
+      const k = /^(fixed|var):(\d+)$/.exec(pi.key || '');
       if (k) nextN[isVar ? 'variable' : 'fixed'] = Math.max(nextN[isVar ? 'variable' : 'fixed'], Number(k[2]) + 1);
-      keyed.push({ isVar: isVar, group: trim(r[1]), name: name, budget: num(r[3]), n: k ? Number(k[2]) : -1, row: i + 2 });
+      keyed.push({ isVar: isVar, group: pi.group, name: pi.name, budget: pi.budget, n: k ? Number(k[2]) : -1, row: pi.row });
     });
     keyed.forEach(it => { if (it.n < 0) { it.n = nextN[it.isVar ? 'variable' : 'fixed']++; missing.push(it); } });
     keyed.forEach(it => { const list = lists[it.isVar ? 'variable' : 'fixed']; list[it.n] = { n: it.n, group: it.group, name: it.name, budget: it.budget, row: it.row }; });
     ['fixed', 'variable'].forEach(t => { for (let n = 0; n < lists[t].length; n++) if (!lists[t][n]) lists[t][n] = { n: n, group: '', name: '', budget: 0, row: 0, gone: true }; });
     if (missing.length) {   // סעיף חדש שנוסף ישירות בגיליון מקבל מפתח קבוע
-      await Promise.all(missing.map(it => putVals(q(SHEETS.ITEMS) + '!E' + it.row, [[(it.isVar ? 'var:' : 'fixed:') + it.n]], 'RAW')));
+      const kc = parsed.layout === 'flat' ? 'E' : 'C';
+      await Promise.all(missing.map(it => putVals(q(SHEETS.ITEMS) + '!' + kc + it.row, [[(it.isVar ? 'var:' : 'fixed:') + it.n]], 'RAW')));
     }
     const first = Math.floor(startYm / 100) * 100 + (startYm % 100);
     let opening = {}; try { const o = setting('opening'); opening = o ? JSON.parse(o) : {}; } catch (e) { opening = {}; }
@@ -553,16 +552,16 @@
   async function repair() {
     cache.model = null;
     const mod = await model(); if (!mod.v2) throw new Error('התיקון מיועד לקובץ בפורמט החדש');
-    const W = wb(), rows = await getVals(q(SHEETS.ITEMS) + '!A2:F500');
-    const items = []; rows.forEach((r, i) => { const t = trim(r[0]), n = trim(r[2]); if (!t || !n) return; if (t !== 'קבועה' && t !== 'שוטפת' && t !== 'משתנה') return; items.push({ type: t === 'קבועה' ? 'קבועה' : 'שוטפת', group: trim(r[1]), name: n, budget: num(r[3]), key: String(r[4] || ''), row: i + 2 }); });
-    const p = W.repairPlan(items, mod.startYm, mod.months);
+    const W = wb(), rows = await getVals(q(SHEETS.ITEMS) + '!A1:H500'), parsed = W.parseItems(rows);
+    const items = parsed.items;
+    const p = W.repairPlan(items, mod.startYm, mod.months, parsed.layout, parsed.marks);
     let m = await meta(true);
     const adds = p.sheets.filter(s => m[s[1]] == null).map(s => ({ addSheet: { properties: { title: s[1], rightToLeft: true } } }));
     if (adds.length) { await api(':batchUpdate', { method: 'POST', body: { requests: adds } }); m = await meta(true); }
     const map = {}; p.sheets.forEach(s => { map[s[0]] = m[s[1]]; });
     const info = await api('', { params: { fields: 'sheets.protectedRanges.protectedRangeId' } });
     const dels = []; (info.sheets || []).forEach(s => (s.protectedRanges || []).forEach(r => dels.push({ deleteProtectedRange: { protectedRangeId: r.protectedRangeId } })));
-    await api('/values:batchClear', { method: 'POST', body: { ranges: [q(W.T.VAR) + '!A1:DZ300', q(W.T.FIXED) + '!A1:DZ300', q(W.T.ITEMS) + '!G1:I30'] } });
+    await api('/values:batchClear', { method: 'POST', body: { ranges: [q(W.T.VAR) + '!A1:DZ300', q(W.T.FIXED) + '!A1:DZ300'] } });
     await api('/values:batchUpdate', { method: 'POST', body: { valueInputOption: 'USER_ENTERED', data: p.formulas } });
     await api('/values:batchUpdate', { method: 'POST', body: { valueInputOption: 'RAW', data: p.raw } });
     const reqs = swapIds(W.formatRequests(p), map);

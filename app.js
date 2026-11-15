@@ -608,7 +608,7 @@ function settings() {
 }
 
 /* ---------- נעילה: יציאה מהתקציב בלי לנתק את הגיליון ---------- */
-const APP_VERSION = /*v*/'6.8 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
+const APP_VERSION = /*v*/'6.9 · 15.11';   // מתעדכן בכל שחרור, כדי לראות בטלפון שהגרסה החדשה נטענה
 const PIN = {
   get() { return LS.get('pin', null); },
   async hash(pin, salt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); },
@@ -756,7 +756,7 @@ function filesScreen() {
 function emptyGuide() {
   const url = 'https://docs.google.com/spreadsheets/d/' + S.cfg.sheetId + '/edit';
   return `<div class="empty guide"><b>עוד לא הגדרת תקציב</b>
-    <ol><li>פתחי את הגיליון בלחיצה על הכפתור.</li><li>בלשונית <b>"התקציב"</b>, בעמודה <b>"תקציב חודשי"</b>, כתבי סכום ליד כל סעיף שרלוונטי לך (בהכנסות ובהוצאות). אפשר לשנות שמות, למחוק סעיפים שלא צריך ולהוסיף שורות.</li><li>חזרי לאפליקציה ומשכי למטה לרענון. הסעיפים עם תקציב יופיעו כאן.</li></ol>
+    <ol><li>פתחי את הגיליון בלחיצה על הכפתור.</li><li>בלשונית <b>"התקציב"</b>, בעמודה <b>"תקציב חדש"</b>, כתבי סכום ליד כל סעיף שרלוונטי לך (בהכנסות ובהוצאות). אפשר לשנות שמות, למחוק סעיפים שלא צריך ולהוסיף שורות.</li><li>חזרי לאפליקציה ומשכי למטה לרענון. הסעיפים עם תקציב יופיעו כאן.</li></ol>
     <a class="btn sm" href="${esc(url)}" target="_blank" rel="noopener">פתיחת הגיליון</a></div>`;
 }
 
