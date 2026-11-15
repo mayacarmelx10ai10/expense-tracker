@@ -151,7 +151,7 @@
     return staticFormat(p.items).concat(viewFormat(ID.VAR, p.views.VAR), viewFormat(ID.FIXED, p.views.FIXED));
   }
   const createBody = (title, p) => ({
-    properties: { title: title, locale: 'he_IL', timeZone: 'Asia/Jerusalem' },
+    properties: { title: title, timeZone: 'Asia/Jerusalem' },
     sheets: p.sheets.map((s, i) => ({ properties: { sheetId: s[0], title: s[1], index: i, rightToLeft: true, tabColorStyle: { rgbColor: rgb(s[2]) }, gridProperties: { rowCount: s[0] === ID.LOG ? 2000 : 600, columnCount: Math.max(14, s[0] === ID.VAR ? p.views.VAR.width + 1 : s[0] === ID.FIXED ? p.views.FIXED.width + 1 : 14) } } }))
   });
 
