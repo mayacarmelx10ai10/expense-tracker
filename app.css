@@ -590,3 +590,19 @@ body{touch-action:manipulation}
 .cn-steps small{display:block;font-size:12px;font-weight:400;color:var(--mute)}
 @keyframes cnSpin{to{transform:rotate(360deg)}}
 .cn-sub{font-size:14px;color:var(--mute);min-height:20px}
+
+/* חיווי למגע ולעכבר: כל כפתור מגיב ל-hover ולהקשה */
+button,.btn,.lnk,.lnkp{transition:transform .12s ease,filter .12s ease,background-color .12s ease,opacity .12s ease}
+button:not([disabled]):active,.btn:not([disabled]):active{transform:scale(.96);filter:brightness(.88)}
+.lnk:active,.lnkp:active{opacity:.55}
+.btn.o:not([disabled]):active,.btn.danger:not([disabled]):active{background:var(--sand-2);filter:none}
+.nav button:active{background:var(--sand-2);border-radius:20px;filter:none}
+.nav .fab:active{transform:scale(.92)}
+@media (hover:hover){
+  .btn:not([disabled]):hover{filter:brightness(1.25)}
+  .btn.o:not([disabled]):hover,.btn.danger:not([disabled]):hover{background:var(--sand-2);filter:none}
+  .nav button:hover{background:var(--sand-2);border-radius:20px}
+  .lnk:hover,.lnkp:hover{opacity:.7}
+  button[disabled]{cursor:default}
+}
+@media (prefers-reduced-motion:reduce){button,.btn{transition:none}}
